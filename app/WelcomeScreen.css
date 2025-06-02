@@ -1,0 +1,188 @@
+/* === 1. Outer container: center everything vertically & horizontally === */
+.welcome-container {
+  display: flex;
+  align-items: center;       /* vertical centering */
+  justify-content: center;   /* horizontal centering */
+  padding: 24px;
+  min-height: 100vh;
+  box-sizing: border-box;
+  background-color: #fafafa;
+}
+
+/* === 2. Inner wrapper to constrain width on larger screens === */
+.content-wrapper {
+  width: 100%;
+  max-width: 800px;       /* allow up to 800px on large desktops */
+  padding: 0 16px;
+  box-sizing: border-box;
+}
+
+/* === 3. Panels container: 
+   - column on narrow screens 
+   - row (two columns) on medium+ screens 
+=== */
+.panels-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* centers items horizontally when stacking */
+  gap: 24px;             /* vertical gap on mobile */
+}
+
+/* LEFT PANEL occupies full width on mobile, half on desktop */
+.left-panel {
+  width: 100%;
+  text-align: center;    /* center-align on mobile */
+}
+.left-panel .welcome-title {
+  font-size: 2rem;       /* ~32px */
+  margin: 0;
+  color: #1a2634;
+}
+.left-panel .welcome-subtitle {
+  font-size: 1rem;       /* ~16px */
+  margin-top: 8px;
+  color: #555;
+  max-width: 360px;      /* limit line length */
+  line-height: 1.4;
+  margin-left: auto;
+  margin-right: auto;    /* keep subtitle centered on mobile */
+}
+
+/* RIGHT PANEL occupies full width on mobile, half on desktop */
+.right-panel {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;   /* center-align on mobile */
+}
+
+/* === 4. Image Placeholder === */
+.image-placeholder {
+  width: 100%;
+  max-width: 360px;       /* limit how wide the square can get */
+  aspect-ratio: 1 / 1;    /* always a square */
+  background-color: #e0e0e0;
+  border-radius: 8px;
+  margin-bottom: 24px;    /* space before buttons */
+}
+
+/* === 5. Buttons === */
+.btn {
+  width: 100%;
+  max-width: 360px;
+  padding: 14px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  margin-bottom: 12px;
+  box-sizing: border-box;
+}
+
+/* Secondary (outlined) */
+.btn-secondary {
+  background-color: transparent;
+  color: #1a2634;
+  border: 2px solid #1a2634;
+  box-shadow: none; /* no shadow for outlined buttons */
+  font-weight: 600; /* slightly bolder for emphasis */
+}
+.btn-secondary:hover {
+  background-color: #1a2634;
+  color: #fff;
+}
+
+/* Primary (filled) */
+.btn-primary {
+  background-color: #1a2634;
+  color: #fff;
+  border: none;
+}
+.btn-primary:hover {
+  background-color: #16202a;
+}
+
+/* === 6. Responsive Breakpoints === */
+
+/* ----- a) ≤480px (small phones) ----- */
+@media (max-width: 480px) {
+  .content-wrapper {
+    max-width: 320px;
+    padding: 0 8px;
+  }
+  .left-panel .welcome-title {
+    font-size: 1.5rem;     /* ~24px */
+  }
+  .left-panel .welcome-subtitle {
+    font-size: 0.9rem;     /* ~14.5px */
+    max-width: 280px;
+  }
+  .image-placeholder {
+    max-width: 280px;
+  }
+  .btn {
+    font-size: 0.95rem;
+    max-width: 280px;
+  }
+}
+
+/* ----- b) ≥768px (tablets & small desktops): switch to two-column row layout ----- */
+@media (min-width: 768px) {
+  .panels-container {
+    flex-direction: row;
+    align-items: flex-start;    /* align panels at the top */
+    gap: 40px;                   /* horizontal gap between left & right */
+  }
+
+  .left-panel,
+  .right-panel {
+    width: 50%;                  /* each panel takes half the width */
+    text-align: left;            /* left-align text on desktop */
+  }
+
+  /* Left panel tweaks for desktop */
+  .left-panel .welcome-title {
+    font-size: 2.5rem;           /* ~40px */
+  }
+  .left-panel .welcome-subtitle {
+    font-size: 1.1rem;           /* ~17.5px */
+    max-width: 400px;
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  /* Right panel elements center only within their 50% column */
+  .right-panel {
+    align-items: flex-start;     /* left-align within right column */
+  }
+  .image-placeholder {
+    max-width: 400px;
+    margin-bottom: 32px;         /* more space above buttons */
+  }
+  .btn {
+    max-width: 400px;
+    font-size: 1.05rem;
+  }
+}
+
+/* ----- c) ≥1024px (large desktops): increase max-widths further ----- */
+@media (min-width: 1024px) {
+  .content-wrapper {
+    max-width: 1000px;       /* allow more breathing room */
+  }
+  .left-panel .welcome-title {
+    font-size: 3rem;         /* ~48px */
+  }
+  .left-panel .welcome-subtitle {
+    font-size: 1.2rem;       /* ~19px */
+    max-width: 500px;
+  }
+  .image-placeholder {
+    max-width: 500px;
+  }
+  .btn {
+    max-width: 500px;
+    font-size: 1.1rem;
+  }
+}

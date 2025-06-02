@@ -1,0 +1,268 @@
+/* === 1. Outer container: full‐viewport centering & padding === */
+.create-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;       /* horizontally center entire column */
+  padding: 24px;
+  min-height: 100vh;         /* span full viewport height */
+  box-sizing: border-box;
+  background-color: #fafafa;
+}
+
+/* === 2. Progress Bar Section === */
+.progress-section {
+  width: 100%;
+  max-width: 600px;         /* limit width on desktop */
+  margin-bottom: 24px;
+}
+
+.progress-text {
+  display: block;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.progress-bar-outer {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  width: 33.33%;            /* since Step 1 of 3 → ~33% */
+  height: 100%;
+  background-color: #1a2634; /* dark navy */
+  border-radius: 4px 0 0 4px;
+}
+
+/* === 3. Header: Back arrow + Title === */
+.header-section {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 12px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;       /* ~20px arrow */
+  color: #1a2634;
+  cursor: pointer;
+  padding: 4px 8px;         /* small hit area */
+  margin-right: 12px;
+}
+
+.back-button:hover {
+  color: #16202a;
+}
+
+.page-title {
+  font-size: 1.75rem;       /* ~28px */
+  margin: 0;
+  color: #1a2634;
+}
+
+/* === 4. Subtitle under header === */
+.subtitle {
+  width: 100%;
+  max-width: 600px;
+  font-size: 0.95rem;       /* ~15px */
+  color: #555;
+  margin-bottom: 24px;
+}
+
+/* === 5. Form Section === */
+.form-section {
+  width: 100%;
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-sizing: border-box;
+}
+
+/* Row wrapper for two‐column inputs (First Name/Surname, Country Code/Phone) */
+.form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;                /* vertical gap on mobile */
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.form-group.full-width {
+  width: 100%;
+}
+
+/* Label styling */
+.form-group label {
+  font-size: 0.9rem;
+  color: #333;
+  margin-bottom: 4px;
+}
+
+/* Basic input styling */
+.form-group input {
+  padding: 10px 12px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.form-group input:focus {
+  outline: none;
+  border-color: #1a2634;
+}
+
+/* Container to hold an icon + an input */
+.input-with-icon {
+  position: relative;
+}
+
+.input-with-icon .icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #555;
+}
+
+.input-with-icon input {
+  padding-left: 36px;       /* leave space for the icon */
+}
+
+/* Adjust icon color on input focus */
+.input-with-icon input:focus + .icon,
+.input-with-icon input:focus ~ .icon {
+  color: #1a2634;
+}
+input{
+  color: #333;
+}
+
+/* Special styling for phone group labels and inputs */
+.phone-group {
+  flex: 1;                  /* take equal space in a row */
+}
+
+/* ==== Button Styling ==== */
+.btn {
+  padding: 12px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background-color: #1a2634;
+  color: #fff;
+  border: none;
+}
+
+.btn-primary:hover {
+  background-color: #16202a;
+}
+
+/* “Next” button sits at the bottom of the form */
+.next-button {
+  margin-top: 8px;
+  width: 100%;
+}
+
+/* On desktop: outline style is not needed for “Next” (only primary) */
+
+/* === 6. RESPONSIVE BREAKPOINTS === */
+
+/* ----- a) MOBILE PHONES (≤600px) ----- */
+@media (max-width: 600px) {
+  .form-row {
+    flex-direction: column;    /* stack every input */
+  }
+  .form-group input {
+    font-size: 0.95rem;
+  }
+  .back-button {
+    font-size: 1.1rem;
+    margin-right: 8px;
+  }
+  .page-title {
+    font-size: 1.5rem;
+  }
+  .progress-bar-outer {
+    height: 6px;
+  }
+}
+
+/* ----- b) TABLET & DESKTOP (≥601px) ----- */
+@media (min-width: 601px) {
+  /* For the rows that have two inputs, display them side by side */
+  .form-row {
+    flex-direction: row;
+    gap: 24px;               /* horizontal space between the two fields */
+  }
+  .form-group {
+    flex: 1;                 /* each takes equal space in that row */
+  }
+  .phone-group {
+    flex: 2;                 /* make phone number field a bit wider than country code */
+  }
+  /* Increase page title on desktop */
+  .page-title {
+    font-size: 1.75rem;      /* ~28px */
+  }
+  .progress-bar-outer {
+    height: 8px;
+  }
+}
+
+/* ----- c) LARGE DESKTOP (≥1024px) ----- */
+@media (min-width: 1024px) {
+  .create-container {
+    padding: 32px;
+  }
+  .progress-section,
+  .header-section,
+  .subtitle,
+  .form-section {
+    max-width: 700px;        /* allow a bit more width on large screens */
+  }
+  .page-title {
+    font-size: 2rem;         /* ~32px */
+  }
+  .form-row {
+    gap: 32px;
+  }
+  .button {
+    font-size: 1.05rem;
+  }
+}
+/* Error text under the form */
+.error-text {
+  color: #d32f2f;       /* red 700 */
+  font-size: 0.9rem;    /* slightly smaller than body text */
+  margin-top: 4px;
+  margin-bottom: 4px;
+  text-align: left;
+}
+
+/* You might also want to ensure .next-button looks disabled when loading */
+.next-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
