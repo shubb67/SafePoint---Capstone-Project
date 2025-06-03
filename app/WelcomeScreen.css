@@ -78,13 +78,14 @@
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
   margin-bottom: 12px;
   box-sizing: border-box;
+   border: 1px solid #1a2634;
 }
 
 /* Secondary (outlined) */
 .btn-secondary {
   background-color: transparent;
   color: #1a2634;
-  border: 2px solid #1a2634;
+  border: 1px solid #1a2634 !important;
   box-shadow: none; /* no shadow for outlined buttons */
   font-weight: 600; /* slightly bolder for emphasis */
 }

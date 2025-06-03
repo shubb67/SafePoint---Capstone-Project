@@ -1,0 +1,78 @@
+/* src/Step3.css */
+
+/* 1) Re‐use all of CreateAccount.css (and any Step2 overrides) */
+@import "./CreateAccount.css";
+
+/* 2) Progress bar: full width for Step 3 */
+.progress-bar-inner.step3 {
+  width: 100%;
+}
+
+/* 3) Style the circular placeholder container */
+.photo-placeholder-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 24px 0;
+}
+
+.photo-placeholder {
+  width: 200px;
+  height: 200px;
+  background-color: #e0e0e0;
+  border-radius: 50%;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+/* Show a selected image preview inside the circle, covering it fully */
+.photo-preview {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+}
+
+/* Center the SVG icon within the circle */
+.photo-icon-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* 4) Legal text under placeholder */
+.legal-text {
+  font-size: 0.85rem;
+  color: #555;
+  text-align: center;
+  padding: 0 16px;
+  margin-top: -8px;
+  margin-bottom: 16px;
+}
+
+.legal-text a {
+  color: #1a2634;
+  text-decoration: underline;
+}
+
+.legal-text a:hover {
+  color: #16202a;
+}
+
+/* 5) Specific button overrides for Step 3 */
+.skip-button, .next-button {
+  width: 100%;
+  max-width: 600px;   /* match Step1/Step2 max widths */
+  margin-bottom: 12px;
+}
+
+/* 6) Error text (same as before) */
+.error-text {
+  color: #d32f2f;     /* red */
+  font-size: 0.9rem;
+  margin-top: 4px;
+  margin-bottom: 8px;
+  text-align: center;
+}

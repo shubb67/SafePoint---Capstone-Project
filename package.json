@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "cloudinary": "^2.6.1",
     "firebase": "^11.8.1",
     "next": "15.3.3",
     "react": "^19.0.0",

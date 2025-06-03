@@ -35,7 +35,9 @@ const WelcomeScreen = () => {
             </Link>
             </button>
 
-            <button className="btn btn-primary">Login</button>
+            <button className="btn btn-primary"><Link to="/login">
+              Login to Existing Account
+            </Link></button>
           </div>
         </div>
       </div>

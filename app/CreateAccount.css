@@ -63,9 +63,11 @@
 }
 
 .page-title {
+  flex: 1;                  /* take up remaining space */
   font-size: 1.75rem;       /* ~28px */
   margin: 0;
   color: #1a2634;
+  text-align: center;       /* keep the text centered */
 }
 
 /* === 4. Subtitle under header === */
@@ -75,6 +77,7 @@
   font-size: 0.95rem;       /* ~15px */
   color: #555;
   margin-bottom: 24px;
+  text-align: center;       /* center the subtitle text */
 }
 
 /* === 5. Form Section === */
@@ -119,6 +122,7 @@
   border-radius: 6px;
   box-sizing: border-box;
   transition: border-color 0.15s ease-in-out;
+  
 }
 
 .form-group input:focus {
@@ -129,8 +133,12 @@
 /* Container to hold an icon + an input */
 .input-with-icon {
   position: relative;
+
 }
 
+.email-input {
+  width: 100%;      /* leave space for the icon */
+}
 .input-with-icon .icon {
   position: absolute;
   top: 50%;
@@ -265,4 +273,87 @@ input{
 .next-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+/* PHONE COMBO: dropdown + input in a single row */
+.phone-combo {
+  display: flex;
+  width: 100%;
+}
+
+/* 1) Country Code dropdown */
+.country-select {
+  flex: 0 0 10%;           /* 30% of the width */
+  padding: 10px 8px;
+  font-size: 1rem;
+  color: #000;
+  border: 1px solid #ccc;
+     /* no double-border between select & input */
+     border-radius: 6px; /* rounded left side */
+  background-color: #fff;
+  box-sizing: border-box;
+  appearance: none;        /* remove default arrow styling on some browsers */
+  cursor: pointer;
+  margin-right: 0.2rem;
+}
+
+/* 2) Phone input wrapper (with icon) */
+.phone-input-wrapper {
+  flex: 1;                 /* remaining 70% of the width */
+  position: relative;
+}
+
+/* Shared phone input styles */
+.phone-input-wrapper .phone-input {
+  width: 100%;
+  padding: 10px 12px;
+  padding-left: 36px;      /* space for the icon */
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  /* no double-border against the select */
+  border-top-right-radius: 6px;
+  border-bottom-right-radius: 6px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease-in-out;
+}
+
+.phone-input-wrapper .phone-input:focus {
+  outline: none;
+  border-color: #1a2634;
+}
+
+/* Phone icon inside the right‐hand input */
+.phone-input-wrapper .icon {
+  position: absolute;
+  top: 50%;
+  left: 12px;
+  transform: translateY(-50%);
+  color: #000000;
+  z-index: 1;
+}
+
+.phone-input-wrapper .phone-input:focus + .icon,
+.phone-input-wrapper .phone-input:focus ~ .icon {
+  color: #1a2634;
+}
+
+
+/* Responsive adjustments (optional) */
+@media (max-width: 480px) {
+  .phone-combo {
+    flex-direction: column;
+  }
+  .country-select,
+  .phone-input-wrapper .phone-input {
+    width: 100%;
+    border-radius: 6px; /* restore full rounding on mobile when stacked */
+    border-right: 1px solid #ccc;
+    border-left: 1px solid #ccc;
+    margin-bottom: 8px;
+  }
+  .country-select {
+    border-bottom: none;
+  }
+  .phone-input-wrapper .phone-input {
+    border-top: none;
+  }
 }

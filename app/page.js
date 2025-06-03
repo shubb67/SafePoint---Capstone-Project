@@ -5,6 +5,10 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import WelcomeScreen from "./WelcomeScreen";
 import CreateAccount from "./CreateAccount";
+import Step2 from "./step2";
+import Step3 from "./step3";
+import Step4 from "./step4";
+import Login from "./login";
 
 function App() {
   return (
@@ -16,6 +20,12 @@ function App() {
         */}
         <Route path="/" element={<WelcomeScreen />} />
         <Route path="/create-account" element={<CreateAccount />} />
+        <Route path="/company-information" element={<Step2 />} />
+        <Route path="/upload-photo" element={<Step3 />} />
+        <Route path="/final-step" element={<Step4 />} /> 
+        <Route path="/login" element={<Login />} />
+        
+       
       </Routes>
     </BrowserRouter>
   );
