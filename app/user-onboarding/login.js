@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/firebase"; // Ensure auth is exported from firebase.js
-import "./login.css";
+import "../styles/login.css";
 
 const Login = () => {
   const navigate = useNavigate();

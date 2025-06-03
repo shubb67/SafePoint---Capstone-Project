@@ -175,12 +175,16 @@ input{
   cursor: pointer;
   transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
   box-sizing: border-box;
+  text-align: center;
+  width: 100%;              /* full width within its container */
 }
 
 .btn-primary {
   background-color: #1a2634;
   color: #fff;
   border: none;
+  text-align: center;
+  width: 100%;          /* full width within its container */
 }
 
 .btn-primary:hover {

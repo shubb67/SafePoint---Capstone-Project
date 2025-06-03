@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "./CreateAccount.css";
+import "../styles/CreateAccount.css";
 
 const CreateAccount = () => {
   // ─── State hooks for each field ────────────────────────────────

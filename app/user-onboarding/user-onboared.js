@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "@/firebase"; // auth & db must be exported
 import { doc, getDoc } from "firebase/firestore";
-import "./step4.css";
+import "../styles/step4.css";
 
 const Step4 = () => {
   const [photoURL, setPhotoURL] = useState(null);

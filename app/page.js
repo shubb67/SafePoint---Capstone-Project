@@ -4,11 +4,11 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import WelcomeScreen from "./WelcomeScreen";
-import CreateAccount from "./CreateAccount";
-import Step2 from "./step2";
-import Step3 from "./step3";
-import Step4 from "./step4";
-import Login from "./login";
+import CreateAccount from "./user-onboarding/CreateAccount";
+import Step2 from "./user-onboarding/company-info";
+import Step3 from "./user-onboarding/upload-photo";
+import Step4 from "./user-onboarding/user-onboared";
+import Login from "./user-onboarding/login";
 
 function App() {
   return (

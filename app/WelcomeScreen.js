@@ -2,7 +2,7 @@
 "use client";
 import React from "react";
 import { Link } from "react-router-dom"; // ← import Link
-import "./WelcomeScreen.css";
+import "./styles/WelcomeScreen.css";
 
 const WelcomeScreen = () => {
   return (

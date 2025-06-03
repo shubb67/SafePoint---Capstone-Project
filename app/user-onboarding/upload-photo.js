@@ -3,7 +3,7 @@ import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
 import { auth, db } from "@/firebase"; // make sure auth & db are exported
-import "./step3.css";
+import "../styles/step3.css";
 
 const Step3 = () => {
   const [selectedFile, setSelectedFile] = useState(null);
