@@ -31,7 +31,7 @@ const Login = () => {
       setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password);
       // On success, navigate to home/dashboard
-      navigate("/");
+      navigate("/incident-type"); // Adjust this path as needed
     } catch (err) {
       console.error("Login error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {

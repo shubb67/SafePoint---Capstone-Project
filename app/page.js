@@ -9,6 +9,8 @@ import Step2 from "./user-onboarding/company-info";
 import Step3 from "./user-onboarding/upload-photo";
 import Step4 from "./user-onboarding/user-onboared";
 import Login from "./user-onboarding/login";
+import IncidentType from "./incident-report/incident-type";
+import PersonalInformation from "./incident-report/personal-information";
 
 function App() {
   return (
@@ -24,6 +26,13 @@ function App() {
         <Route path="/upload-photo" element={<Step3 />} />
         <Route path="/final-step" element={<Step4 />} /> 
         <Route path="/login" element={<Login />} />
+        <Route path="/incident-type" element={<IncidentType />} />
+        <Route path="/personal-information" element={<PersonalInformation />} />
+        {/* 
+          3) Any other path will render a 404 Not Found page 
+          (You can create a NotFound component if needed)
+        */}
+        <Route path="*" element={<h1>404 Not Found</h1>} />
         
        
       </Routes>

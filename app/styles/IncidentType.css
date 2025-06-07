@@ -1,0 +1,206 @@
+/* IncidentTypeStep.css */
+
+/* === 1. Outer container: full‐viewport centering & padding === */
+.incident-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;       /* center horizontally */
+  padding: 24px;
+  min-height: 100vh;         /* full viewport height */
+  box-sizing: border-box;
+  background-color: #fafafa;
+}
+.incident-card.selected {
+  border-color: #1a2634;
+  background-color: #f0f4f8;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.12);
+}
+
+.btn.disabled,
+.btn:disabled {
+  background-color: #aaa;
+  cursor: not-allowed;
+}
+/* === 2. Progress Bar Section === */
+.progress-section {
+  width: 100%;
+  max-width: 600px;         /* limit width */
+  margin-bottom: 24px;
+}
+
+.progress-text {
+  display: block;
+  text-align: center;
+  font-size: 0.95rem;
+  color: #333;
+  margin-bottom: 8px;
+}
+
+.progress-bar-outer {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-bar-inner {
+  width: 33.33%;            /* Step 1 of 6 → ~33% (you can adjust) */
+  height: 100%;
+  background-color: #1a2634; /* dark navy */
+  border-radius: 4px 0 0 4px;
+}
+
+/* === 3. Header: Back button + Title === */
+.header-section {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 12px;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  font-size: 1.25rem;       /* ~20px arrow */
+  color: #1a2634;
+  cursor: pointer;
+  padding: 4px 8px;         /* small hit area */
+  margin-right: 12px;
+}
+
+.back-button:hover {
+  color: #16202a;
+}
+
+.page-title {
+  flex: 1;                  /* take remaining space */
+  font-size: 1.75rem;       /* ~28px */
+  margin: 0;
+  color: #1a2634;
+  text-align: center;       /* center the text */
+}
+
+/* === 4. Subtitle under header === */
+.subtitle {
+  width: 100%;
+  max-width: 600px;
+  font-size: 0.95rem;       /* ~15px */
+  color: #555;
+  margin-bottom: 24px;
+  text-align: center;       /* center text */
+}
+
+/* === 5. Cards Wrapper === */
+.cards-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  width: 100%;
+  max-width: 600px;
+  margin-bottom: 24px;
+}
+
+/* Each incident card */
+.incident-card {
+  display: flex;
+  align-items: flex-start;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 0px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+  cursor: pointer;
+}
+
+.incident-card:hover {
+  border-color: #bbb;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Icon image in the card */
+.card-icon {
+  flex-shrink: 0;
+  width: 84px; /* adjust as needed */
+  height: 84px;
+  margin-right: 16px;
+  object-fit: cover; /* maintain aspect ratio */
+}
+
+/* Text portion of the card */
+.card-text {
+  display: flex;
+  margin-top: 3%;
+  flex-direction: column;
+}
+
+.card-title {
+  font-size: 1.1rem;
+  color: #1a2634;
+}
+
+.card-description {
+  font-size: 0.9rem;
+  color: #555;
+  margin: 0;
+}
+
+/* === 6. Next Button === */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 600px;
+  padding: 14px 0;
+  font-size: 1rem;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+  border: none;
+  box-sizing: border-box;
+}
+
+.btn-primary {
+  background-color: #1a2634;
+  color: #fff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: #16202a;
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* === 7. Responsive Adjustments === */
+@media (max-width: 480px) {
+  .cards-wrapper {
+    gap: 12px;
+  }
+
+  .incident-card {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 12px;
+  }
+
+  .card-icon {
+    margin-right: 0;
+    margin-bottom: 8px;
+  }
+
+  .card-title {
+    font-size: 1rem;
+  }
+
+  .card-description {
+    font-size: 0.85rem;
+  }
+}
