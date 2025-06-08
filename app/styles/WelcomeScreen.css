@@ -84,14 +84,14 @@
 /* Secondary (outlined) */
 .btn-secondary {
   background-color: transparent;
-  color: #1a2634;
-  border: 1px solid #1a2634 !important;
+  color: #192C63 !important; /* use !important to override any other styles */
+  border: 1.8px solid #1a2634 !important;
   box-shadow: none; /* no shadow for outlined buttons */
-  font-weight: 600; /* slightly bolder for emphasis */
+  font-weight: 600 !important; /* slightly bolder for emphasis */
 }
 .btn-secondary:hover {
   background-color: #1a2634;
-  color: #fff;
+  color: #fff !important; /* ensure text color changes on hover */
 }
 
 /* Primary (filled) */
