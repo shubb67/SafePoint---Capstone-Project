@@ -1,5 +1,6 @@
 "use client";
 import React from "react";
+import { useState, useEffect } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 import WelcomeScreen from "./WelcomeScreen";
@@ -12,6 +13,15 @@ import IncidentType from "./incident-report/incident-type";
 import PersonalInformation from "./incident-report/personal-information";
 
 function App() {
+    const [hasMounted, setHasMounted] = useState(false);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
+
+  if (!hasMounted) {
+    return null;
+  }
   return (
     <BrowserRouter>
       <Routes>
