@@ -1,5 +1,5 @@
-// src/App.js
 "use client";
+// src/App.js
 import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
