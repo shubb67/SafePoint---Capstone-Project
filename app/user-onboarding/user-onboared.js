@@ -1,7 +1,7 @@
 // src/Step4.js
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { auth, db } from "@/firebase"; // auth & db must be exported
+import { auth, db } from "@/_utils/firebase"; // auth & db must be exported
 import { doc, getDoc } from "firebase/firestore";
 import "../styles/step4.css";
 
@@ -36,7 +36,7 @@ const Step4 = () => {
   return (
     <div className="create-container">
       <div className="final-content">
-        <h1 className="page-title final-title">Let's Get to Work – Safely</h1>
+        <h1 className="page-title final-title">Let&apos;s Get to Work – Safely</h1>
         <p className="subtitle final-subtitle">
           All set! Your SafePoint account is good to go.
         </p>

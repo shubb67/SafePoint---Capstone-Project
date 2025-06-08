@@ -7,7 +7,7 @@ import {
 } from "firebase/auth";
 import { doc, setDoc, serverTimestamp } from "firebase/firestore";
 
-import { auth, db } from "@/firebase"; // make sure auth & db are exported
+import { auth, db } from "@/_utils/firebase"; // make sure auth & db are exported
 import "../styles/step2.css"; // Ensure you have the correct CSS file for styling
 
 const Step2 = () => {

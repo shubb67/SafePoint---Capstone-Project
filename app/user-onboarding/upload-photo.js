@@ -1,8 +1,8 @@
-// src/Step3.js
+"use client";
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { doc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/firebase"; // make sure auth & db are exported
+import { auth, db } from "@/_utils/firebase"; // make sure auth & db are exported
 import "../styles/step3.css";
 
 const Step3 = () => {
