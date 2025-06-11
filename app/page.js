@@ -11,7 +11,7 @@ import Step4 from "./user-onboarding/user-onboared";
 import Login from "./user-onboarding/login";
 import IncidentType from "./incident-report/incident-type";
 import PersonalInformation from "./incident-report/personal-information";
-
+import IncidentDetails from "./incident-report/incident-details";
 function App() {
     const [hasMounted, setHasMounted] = useState(false);
 
@@ -37,6 +37,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/incident-type" element={<IncidentType />} />
         <Route path="/personal-information" element={<PersonalInformation />} />
+        <Route path="/incident-details" element={<IncidentDetails />} />
         {/* 
           3) Any other path will render a 404 Not Found page 
           (You can create a NotFound component if needed)

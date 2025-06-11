@@ -57,12 +57,12 @@ const IncidentType = () => {
   }, [previousState]);
 
   return (
-    <div className="incident-container">
+    <div className="incident-type-container">
       {/* === 1. Progress Bar Section === */}
       <div className="progress-section">
         <span className="progress-text">Step 1 of 6</span>
         <div className="progress-bar-outer">
-          <div className="progress-bar-inner step1"></div>
+          <div className="progress-bar-inner-1 step1"></div>
         </div>
       </div>
 

@@ -1,7 +1,7 @@
 /* IncidentTypeStep.css */
 
 /* === 1. Outer container: full‐viewport centering & padding === */
-.incident-container {
+.incident-type-container {
   display: flex;
   flex-direction: column;
   align-items: center;       /* center horizontally */
@@ -44,8 +44,8 @@
   overflow: hidden;
 }
 
-.progress-bar-inner {
-  width: 33.33%;            /* Step 1 of 6 → ~33% (you can adjust) */
+.progress-bar-inner-1 {
+  width: 13.33%;            /* Step 1 of 6 → ~33% (you can adjust) */
   height: 100%;
   background-color: #1a2634; /* dark navy */
   border-radius: 4px 0 0 4px;
