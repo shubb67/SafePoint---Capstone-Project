@@ -1,14 +1,18 @@
 // src/incident-report/PersonalInfo.js
+"use client";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { auth, db } from "@/_utils/firebase"; 
-import "../styles/PersonalInfo.css";
+import "../../styles/PersonalInfo.css";
+import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 
 const PersonalInfo = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const previousState = location.state || {};
+  const state = useIncidentState();
+  const dispatch = useIncidentDispatch();
 
   // 1) Form state
   const [yourName, setYourName]         = useState("");
@@ -39,15 +43,11 @@ const PersonalInfo = () => {
   // 4) Back and Next
   const handleBack = () => navigate(-1);
   const handleNext = () => {
-    navigate("/incident-details", {
-      state: {
-        ...previousState,
-        yourName,
-        wasInjured,
-        injuredPersons,
-        witnesses,
-      },
-    });
+   dispatch({
+     type: "SET_PERSONAL",
+     payload: { yourName, wasInjured, injuredPersons, witnesses },
+   });
+    navigate("/details");
   };
 
   return (

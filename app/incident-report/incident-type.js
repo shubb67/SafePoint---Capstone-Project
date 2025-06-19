@@ -1,5 +1,7 @@
+"use client";
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useIncidentDispatch, useIncidentState } from "../context/IncidentContext";
 import "../styles/IncidentType.css";
 
 import injuryIcon         from "../assets/image/injury.png";
@@ -10,12 +12,12 @@ import hazardIcon         from "../assets/image/safety-hazards.png";
 const IncidentType = () => {
   const navigate = useNavigate();
   const location = useLocation();
+const state = useIncidentState();
+const dispatch = useIncidentDispatch();
 
   // If any previous steps passed data via location.state, grab it here:
   const previousState = location.state || {};
 
-  // 1) Track which incident type is selected
-  //    Valid keys: "injury", "propertyDamage", "nearMiss", "safetyHazard"
   const [selectedType, setSelectedType] = useState("");
 
   // 2) Helper to extract a URL string from the imported image object
@@ -33,6 +35,7 @@ const IncidentType = () => {
   // 3) Card click handler
   const handleCardClick = (typeKey) => {
     setSelectedType(typeKey);
+    dispatch({ type: "SET_TYPE", payload: typeKey });
   };
 
   // 4) Navigate back one step
@@ -44,7 +47,7 @@ const IncidentType = () => {
   const handleNext = () => {
     if (!selectedType) return;
 
-    navigate("/personal-information", {
+    navigate("/personal-info", {
       state: {
         ...previousState,
         incidentType: selectedType,

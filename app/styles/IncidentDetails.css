@@ -8,7 +8,8 @@ display: flex;
   padding: 24px;
   min-height: 100vh;         /* full viewport height */
   box-sizing: border-box;
-  background-color: #fafafa;}
+  background-color: #fafafa;
+}
 
 /* === 2. Progress Bar Section === */
 .progress-section {
@@ -185,4 +186,108 @@ display: flex;
     font-size: 1.1rem;
     max-width: 600px;
   }
+}
+.waveform-bar {
+    width: 4px;
+    height: 20px;
+    margin: 0 2px;
+    background-color: white;
+    animation: wave 1s infinite ease-in-out;
+    border-radius: 3px;
+  }
+  
+  @keyframes wave {
+    0%, 100% {
+      transform: scaleY(0.5);
+    }
+    50% {
+      transform: scaleY(1.8);
+    }
+  }
+  
+  .waveform-bar:nth-child(1) { animation-delay: 0s; }
+  .waveform-bar:nth-child(2) { animation-delay: 0.1s; }
+  .waveform-bar:nth-child(3) { animation-delay: 0.2s; }
+  .waveform-bar:nth-child(4) { animation-delay: 0.3s; }
+  .waveform-bar:nth-child(5) { animation-delay: 0.4s; }
+  
+  /* === Overlay Backdrop === */
+.overlay {
+  /* already fixed inset-0 bg-black bg-opacity-80 */
+  -webkit-backdrop-filter: blur(3px);
+   backdrop-filter: blur(3px);  
+}
+
+/* Mic circle */
+.mic-circle {
+  width: 120px;
+  height: 120px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.mic-icon {
+  width: 48px;
+  height: 48px;
+  color: #fff;
+}
+
+/* Status / transcript text */
+.overlay-text {
+  font-size: 1.25rem;
+  line-height: 1.4;
+}
+
+/* Done button overrides */
+.overlay .done-button,
+.overlay button.mt-8 {
+  background-color: #ffffff;
+  color: #000;
+  border: none;
+  border-radius: 9999px;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+.overlay .done-button:hover,
+.overlay button.mt-8:hover {
+  background-color: #e5e5e5;
+}
+
+.transcript-container {
+  margin-top: 1rem;
+  padding: 1rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  background-color: #f9f9f9;
+  max-height: 150px;
+  overflow-y: auto;
+}
+
+.transcript-header {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.transcript-content {
+  font-size: 0.95rem;
+  line-height: 1.4;
+  color: #444;
+  white-space: pre-wrap; /* preserve line breaks */
+}
+
+textarea {
+  width: 100%;
+  height: 100px;
+  padding: 10px;
+  font-size: 1rem;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+  resize: vertical; /* allow vertical resizing */
+  color: #000;
 }
