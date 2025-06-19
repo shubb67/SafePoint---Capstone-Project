@@ -22,9 +22,15 @@ import ImpactInfo from "./incident-report/injury/impact-info";
 import { IncidentProvider } from "./context/IncidentContext";
 import Evidence from "./incident-report/injury/evidence";
  import { Navigate } from "react-router-dom";
+ export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 function App() {
+  if (typeof window === "undefined") {
+    return null;
+  }
   return (
+
     <BrowserRouter>
      <IncidentProvider>
       <Routes>

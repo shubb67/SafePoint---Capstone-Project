@@ -1,6 +1,7 @@
-"use client";
+
 import { NextResponse } from "next/server";
-import { firestoreAdmin } from "@/_utils/firebaseAdmin";
+import { getFirestoreAdmin, admin } from "@/_utils/firebaseAdmin";
+export const runtime = "nodejs";
 
 export async function POST(request) {
   try {
@@ -18,7 +19,10 @@ export async function POST(request) {
     if (!date || !time || !locationValue) {
       return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
     }
-
+ const firestoreAdmin = getFirestoreAdmin();
+    if (!firestoreAdmin) {
+      throw new Error("Firebase admin not initialized");
+    }
     const docRef = await firestoreAdmin.collection("incidents").add({
       date,
       time,
