@@ -104,7 +104,7 @@ export default function Login() {
                 placeholder="example@email.com"
                 required
                 className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               />
             </div>
           </div>
@@ -125,7 +125,7 @@ export default function Login() {
               placeholder="Enter Password"
               required
               className="w-full px-3 py-2 border border-gray-300 rounded-lg
-                         focus:border-blue-600 focus:ring focus:ring-blue-200"
+                         focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
             />
           </div>
 
