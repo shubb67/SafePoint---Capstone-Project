@@ -1,192 +1,151 @@
+// src/IncidentType.js
 "use client";
+
 import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useIncidentDispatch, useIncidentState } from "../context/IncidentContext";
-import "../styles/IncidentType.css";
 
-import injuryIcon         from "../assets/image/injury.png";
-import propertyIcon       from "../assets/image/property-damage.png";
-import nearMissIcon       from "../assets/image/danger.png";
-import hazardIcon         from "../assets/image/safety-hazards.png";
+import injuryIcon   from "../assets/image/injury.png";
+import propertyIcon from "../assets/image/property-damage.png";
+import nearMissIcon from "../assets/image/danger.png";
+import hazardIcon   from "../assets/image/safety-hazards.png";
 
-const IncidentType = () => {
+export default function IncidentType() {
   const navigate = useNavigate();
   const location = useLocation();
-const state = useIncidentState();
-const dispatch = useIncidentDispatch();
-
-  // If any previous steps passed data via location.state, grab it here:
-  const previousState = location.state || {};
+  const dispatch = useIncidentDispatch();
+  const previous = location.state || {};
 
   const [selectedType, setSelectedType] = useState("");
+  const state = useIncidentState();
 
-  // 2) Helper to extract a URL string from the imported image object
-  const imgUrl = (imgImport) => {
-    if (!imgImport) return "";
-    if (typeof imgImport === "object" && imgImport.src) {
-      return imgImport.src;
-    }
-    if (typeof imgImport === "object" && imgImport.default) {
-      return imgImport.default;
-    }
-    return imgImport;
-  };
+  const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
-  // 3) Card click handler
-  const handleCardClick = (typeKey) => {
+  const handleCardClick = typeKey => {
     setSelectedType(typeKey);
     dispatch({ type: "SET_TYPE", payload: typeKey });
   };
 
-  // 4) Navigate back one step
-  const handleBack = () => {
-    navigate(-1);
-  };
+  const handleBack = () => navigate(-1);
 
-  // 5) “Next” button: only if a type is selected
   const handleNext = () => {
     if (!selectedType) return;
+       const routeMap = {
+     injury:         "/personal-info",
+     propertyDamage: "/property-damage/personal-info",
+     nearMiss:       "/near-miss-info",
+     safetyHazard:   "/hazard-info",
+   };
 
-    navigate("/personal-info", {
-      state: {
-        ...previousState,
-        incidentType: selectedType,
-      },
-    });
+   // fall back to personal-info if none matched
+   const firstStep = routeMap[selectedType] || "/personal-info";
+   navigate(firstStep, {
+     state: { ...previous, incidentType: selectedType },
+   });
   };
 
   useEffect(() => {
-    console.log("Previous state (if any):", previousState);
-  }, [previousState]);
+    console.log("Previous state:", previous);
+  }, [previous]);
 
   return (
-    <div className="incident-type-container">
-      {/* === 1. Progress Bar Section === */}
-      <div className="progress-section">
-        <span className="progress-text">Step 1 of 6</span>
-        <div className="progress-bar-outer">
-          <div className="progress-bar-inner-1 step1"></div>
+    <div className="min-h-screen bg-gray-50 px-4 py-8 flex flex-col items-center">
+      <div className="w-full max-w-lg">
+        {/* Progress */}
+        <div className="mb-6">
+          <span className="block text-center text-sm text-gray-700 mb-2">
+            Step 1 of 6
+          </span>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-[#192C63] w-1/6 rounded-full" />
+          </div>
         </div>
-      </div>
 
-      {/* === 2. Header with Back Button & Title === */}
-      <div className="header-section">
+        {/* Header */}
+        <div className="flex items-center mb-4">
+          <button
+            onClick={handleBack}
+            className="text-2xl text-gray-800"
+            aria-label="Go back"
+          >
+            ←
+          </button>
+          <h1 className="flex-1 text-xl font-semibold text-gray-800 text-center">
+            Incident Type
+          </h1>
+          <div style={{ width: "1.5rem" }} />
+        </div>
+
+        {/* Subtitle */}
+        <p className="text-center text-gray-600 text-sm mb-6 px-2">
+          Please choose the most appropriate incident type to start your report.
+        </p>
+
+        {/* Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+          {[
+            {
+              key: "injury",
+              icon: injuryIcon,
+              title: "Injury & Loss of Life",
+              desc: "This category covers any incidents where a person sustains physical harm.",
+            },
+            {
+              key: "propertyDamage",
+              icon: propertyIcon,
+              title: "Property Damage",
+              desc: "This type involves damage to physical assets or property.",
+            },
+            {
+              key: "nearMiss",
+              icon: nearMissIcon,
+              title: "Near Miss",
+              desc: "Was there a risk of potential injury or damage that was avoided?",
+            },
+            {
+              key: "safetyHazard",
+              icon: hazardIcon,
+              title: "Safety Hazard",
+              desc: "Unsafe conditions or situations that pose a risk to health and safety.",
+            },
+          ].map(({ key, icon, title, desc }) => (
+            <div
+              key={key}
+              onClick={() => handleCardClick(key)}
+              className={
+                "flex items-start p-4 border rounded-lg cursor-pointer transition shadow-sm " +
+                (selectedType === key
+                  ? "border-[#192C63] bg-blue-50"
+                  : "border-gray-300 hover:shadow-md")
+              }
+            >
+              <img
+                src={imgUrl(icon)}
+                alt={title}
+                className="w-12 h-12 flex-shrink-0"
+              />
+              <div className="ml-4">
+                <h2 className="text-lg font-semibold text-gray-800">{title}</h2>
+                <p className="text-sm text-gray-600 mt-1">{desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Next Button */}
         <button
-          type="button"
-          className="back-button"
-          onClick={handleBack}
-          aria-label="Go back"
+          onClick={handleNext}
+          disabled={!selectedType}
+          className={
+            "w-full py-3 rounded-lg text-white font-medium transition " +
+            (selectedType
+              ? "bg-[#192C63] hover:bg-[#162050]"
+              : "bg-gray-400 cursor-not-allowed")
+          }
         >
-          ←
+          Next
         </button>
-        <h1 className="page-title">Incident Type</h1>
       </div>
-
-      {/* === 3. Subtitle === */}
-      <p className="subtitle">
-        Please choose the most appropriate incident type to start your report.
-      </p>
-
-      {/* === 4. Four Selectable Cards === */}
-      <div className="cards-wrapper">
-        {/* Card 1: Injury & Loss of Life */}
-        <div
-          className={
-            "incident-card" +
-            (selectedType === "injury" ? " selected" : "")
-          }
-          onClick={() => handleCardClick("injury")}
-        >
-          <img
-            src={imgUrl(injuryIcon)}
-            alt="Injury & Loss of Life"
-            className="card-icon"
-          />
-          <div className="card-text">
-            <h2 className="card-title">Injury & Loss of Life</h2>
-            <p className="card-description">
-              This category covers any incidents where a person sustains
-              physical harm.
-            </p>
-          </div>
-        </div>
-
-        {/* Card 2: Property Damage */}
-        <div
-          className={
-            "incident-card" +
-            (selectedType === "propertyDamage" ? " selected" : "")
-          }
-          onClick={() => handleCardClick("propertyDamage")}
-        >
-          <img
-            src={imgUrl(propertyIcon)}
-            alt="Property Damage"
-            className="card-icon"
-          />
-          <div className="card-text">
-            <h2 className="card-title">Property Damage</h2>
-            <p className="card-description">
-              This type involves damage to physical assets or property.
-            </p>
-          </div>
-        </div>
-
-        {/* Card 3: Near Miss */}
-        <div
-          className={
-            "incident-card" +
-            (selectedType === "nearMiss" ? " selected" : "")
-          }
-          onClick={() => handleCardClick("nearMiss")}
-        >
-          <img
-            src={imgUrl(nearMissIcon)}
-            alt="Near Miss"
-            className="card-icon"
-          />
-          <div className="card-text">
-            <h2 className="card-title">Near Miss</h2>
-            <p className="card-description">
-              Was there a risk of potential injury or damage that was avoided?
-            </p>
-          </div>
-        </div>
-
-        {/* Card 4: Safety Hazard */}
-        <div
-          className={
-            "incident-card" +
-            (selectedType === "safetyHazard" ? " selected" : "")
-          }
-          onClick={() => handleCardClick("safetyHazard")}
-        >
-          <img
-            src={imgUrl(hazardIcon)}
-            alt="Safety Hazard"
-            className="card-icon"
-          />
-          <div className="card-text">
-            <h2 className="card-title">Safety Hazard</h2>
-            <p className="card-description">
-              Unsafe conditions or situations that pose a risk to health and
-              safety.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* === 5. Next Button (disabled until a card is selected) === */}
-      <button
-        type="button"
-        className={"btn btn-primary next-button" + (!selectedType ? " disabled" : "")}
-        onClick={handleNext}
-        disabled={!selectedType}
-      >
-        Next
-      </button>
     </div>
   );
-};
-
-export default IncidentType;
+}

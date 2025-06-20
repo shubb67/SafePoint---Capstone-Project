@@ -4,7 +4,6 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
-import "../../styles/Evidence.css";
 import { CloudUpload, Camera, Trash, FileImage, FileVideo } from "lucide-react";
 import axios from "axios";
 
@@ -13,22 +12,20 @@ export default function Evidence() {
   const dispatch  = useIncidentDispatch();
   const { incidentType } = useIncidentState();
 
-  // In-flight upload tasks
-  // { file, progress, cancel, sizeReadable }
+  // In-flight upload tasks: { file, progress, cancel, sizeReadable }
   const [tasks, setTasks]     = useState([]);
-
-  // Completed uploads
-  // { url, name, sizeReadable, type }
+  // Completed uploads:    { url, name, sizeReadable, type }
   const [uploads, setUploads] = useState([]);
 
   const fileRef   = useRef();
   const cameraRef = useRef();
 
-  // helper: bytes → human readable
+  // helper: bytes → human-readable
   const humanFileSize = bytes => {
-    const mb = bytes/1024/1024;
-    if (mb < 0.1) return `${(mb*1024).toFixed(1)} KB`;
-    return `${mb.toFixed(1)} MB`;
+    const mb = bytes / 1024 / 1024;
+    return mb < 0.1
+      ? `${(mb * 1024).toFixed(1)} KB`
+      : `${mb.toFixed(1)} MB`;
   };
 
   // start one upload task
@@ -53,12 +50,12 @@ export default function Evidence() {
             base64:       reader.result,
             incidentType,
             category:     "evidence",
-            step:         "evidence"
+            step:         "images",
           },
           {
             headers: { "Content-Type": "application/json" },
             onUploadProgress: e => {
-              const prog = Math.round((e.loaded*100)/e.total);
+              const prog = Math.round((e.loaded * 100) / e.total);
               setTasks(ts =>
                 ts.map(t =>
                   t.file === file ? { ...t, progress: prog } : t
@@ -69,7 +66,7 @@ export default function Evidence() {
           }
         );
 
-        // on success move to completed
+        // move to completed
         setUploads(u => [
           ...u,
           {
@@ -82,7 +79,6 @@ export default function Evidence() {
       } catch (err) {
         if (!axios.isCancel(err)) console.error("Upload error:", err);
       } finally {
-        // remove from tasks
         setTasks(ts => ts.filter(t => t.file !== file));
       }
     };
@@ -90,9 +86,8 @@ export default function Evidence() {
 
   // handle selection from file picker or camera
   const handleFiles = e => {
-    const files = Array.from(e.target.files||[]);
+    const files = Array.from(e.target.files || []);
     files.forEach(addUploadTask);
-    // allow re-select same file
     e.target.value = "";
   };
 
@@ -100,135 +95,168 @@ export default function Evidence() {
   const deleteUpload = idx => {
     setUploads(u => {
       const copy = [...u];
-      copy.splice(idx,1);
+      copy.splice(idx, 1);
       return copy;
     });
   };
 
   // finish step
-  const handleComplete = () => {
-    dispatch({ type:"SET_EVIDENCE", payload: uploads });
-    navigate("/submit");
+  const handleNext = () => {
+    dispatch({ type: "SET_EVIDENCE", payload: uploads });
+    navigate("/submit"); // adjust path to your next route
   };
 
   return (
-    <div className="evidence-container">
-      {/* Progress Bar */}
-      <div className="progress-section">
-        <span className="progress-text">Step 5 of 6</span>
-        <div className="progress-bar-outer">
-          <div className="progress-bar-inner step5"></div>
-        </div>
-      </div>
-
-      {/* Header */}
-      <div className="header-section">
-        <button className="back-button" onClick={()=>navigate(-1)}>←</button>
-        <h1 className="page-title">Upload Evidence</h1>
-      </div>
-      <p className="subtitle">
-        This helps us investigate what happened and how to prevent it in the future.
-      </p>
-
-      {/* Buttons */}
-      <div className="action-buttons">
-        <button className="btn-select" onClick={()=>fileRef.current.click()}>
-          <CloudUpload size={20}/> Select a File
-        </button>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          style={{display:"none"}}
-          onChange={handleFiles}
-        />
-
-        <div className="or-divider">OR</div>
-
-        <button className="btn-select" onClick={()=>cameraRef.current.click()}>
-          <Camera size={20}/> Take a Picture
-        </button>
-        <input
-          ref={cameraRef}
-          type="file"
-          accept="image/*"
-          capture="environment"
-          style={{display:"none"}}
-          onChange={handleFiles}
-        />
-      </div>
-
-      {/* Documents Panel */}
-      {(tasks.length>0 || uploads.length>0) && (
-        <div className="documents-section">
-          <h2 className="documents-header">Documents</h2>
-          <div className="documents-list">
-            {/* in-flight */}
-            {tasks.map((t,i)=> {
-              const isImage = t.file.type.startsWith("image/");
-              return (
-                <div key={`task-${i}`} className="document-card">
-                  <div className="doc-icon">
-                    {isImage
-                      ? <FileImage size={24}/>
-                      : <FileVideo size={24}/>}
-                  </div>
-                  <div className="doc-info">
-                    <div className="doc-name">{t.file.name}</div>
-                    <div className="doc-size">Uploading… {t.progress}%</div>
-                  </div>
-                  <button
-                    className="doc-delete"
-                    onClick={()=>t.cancel("User canceled")}
-                  >
-                    <Trash size={20}/>
-                  </button>
-                  <div className="upload-progress-bar-outer">
-                    <div
-                      className="upload-progress-bar-inner"
-                      style={{width:`${t.progress}%`}}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-            {/* completed */}
-            {uploads.map((u,i)=> {
-              const isImage = u.type.startsWith("image/");
-              return (
-                <div key={`upl-${i}`} className="document-card">
-                  <div className="doc-icon">
-                    {isImage
-                      ? <FileImage size={24}/>
-                      : <FileVideo size={24}/>}
-                  </div>
-                  <div className="doc-info">
-                    <div className="doc-name">{u.name}</div>
-                    <div className="doc-size">{u.sizeReadable}</div>
-                  </div>
-                  <button
-                    className="doc-delete"
-                    onClick={()=>deleteUpload(i)}
-                  >
-                    <Trash size={20}/>
-                  </button>
-                </div>
-              );
-            })}
+    <div className="flex flex-col min-h-screen bg-gray-50 px-4 pt-6 pb-8">
+      <div className="max-w-md w-full mx-auto flex flex-col flex-1">
+        {/* Progress */}
+        <div className="space-y-2 mb-6">
+          <span className="block text-center text-sm text-gray-700">
+            Step 5 of 6
+          </span>
+          <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div className="h-full bg-[#192C63] w-5/6 rounded-full" />
           </div>
         </div>
-      )}
 
-      {/* Complete */}
-      <button
-        className="btn btn-primary complete-button"
-        onClick={handleComplete}
-        disabled={uploads.length===0}
-      >
-        Complete
-      </button>
+        {/* Back + Title */}
+        <div className="flex items-center mb-4">
+          <button
+            onClick={() => navigate(-1)}
+            className="text-2xl text-gray-800"
+          >
+            ←
+          </button>
+          <h1 className="flex-1 text-center text-xl font-semibold text-gray-900">
+            Upload Evidence
+          </h1>
+          <div style={{ width: "1.5rem" }} />
+        </div>
+
+        <p className="text-center text-gray-600 text-sm mb-8">
+          This helps us investigate what happened and how to prevent it in the future.
+        </p>
+
+        {/* Select / Capture Buttons */}
+        <div className="space-y-4">
+          <button
+            onClick={() => fileRef.current.click()}
+            className="flex items-center justify-center space-x-2 w-full px-4 py-3 border-2 border-[#192C63] rounded-lg text-[#192C63] hover:bg-[#192C63] hover:text-white transition"
+          >
+            <CloudUpload size={20} />
+            <span>Select a File</span>
+          </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="hidden"
+            onChange={handleFiles}
+          />
+
+          <div className="flex items-center justify-center space-x-2 text-gray-400">
+            <span className="h-px flex-1 bg-gray-300" />
+            <span>OR</span>
+            <span className="h-px flex-1 bg-gray-300" />
+          </div>
+
+          <button
+            onClick={() => cameraRef.current.click()}
+            className="flex items-center justify-center space-x-2 w-full px-4 py-3 border-2 border-[#192C63] rounded-lg text-[#192C63] hover:bg-[#192C63] hover:text-white transition"
+          >
+            <Camera size={20} />
+            <span>Take a Picture</span>
+          </button>
+          <input
+            ref={cameraRef}
+            type="file"
+            accept="image/*"
+            capture="environment"
+            className="hidden"
+            onChange={handleFiles}
+          />
+        </div>
+
+        {/* Documents Panel */}
+        {(tasks.length > 0 || uploads.length > 0) && (
+          <div className="bg-white rounded-lg shadow p-4 mt-6 space-y-4">
+            <h2 className="text-lg font-medium text-gray-800">Documents</h2>
+            <div className="space-y-3">
+              {/* In-flight */}
+              {tasks.map((t, i) => {
+                const isImage = t.file.type.startsWith("image/");
+                return (
+                  <div
+                    key={i}
+                    className="relative flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+                  >
+                    <div className="text-gray-500">
+                      {isImage ? <FileImage size={24} /> : <FileVideo size={24} />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">{t.file.name}</div>
+                      <div className="text-sm text-gray-600">
+                        Uploading… {t.progress}%
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => t.cancel("User canceled")}
+                      className="p-1 text-gray-500 hover:text-red-600"
+                    >
+                      <Trash size={20} />
+                    </button>
+                    <div className="absolute bottom-1 left-1 right-1 h-1 bg-gray-200 rounded overflow-hidden">
+                      <div
+                        className="h-full bg-[#192C63]"
+                        style={{ width: `${t.progress}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+
+              {/* Completed */}
+              {uploads.map((u, i) => {
+                const isImage = u.type.startsWith("image/");
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+                  >
+                    <div className="text-gray-500">
+                      {isImage ? <FileImage size={24} /> : <FileVideo size={24} />}
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">{u.name}</div>
+                      <div className="text-sm text-gray-600">{u.sizeReadable}</div>
+                    </div>
+                    <button
+                      onClick={() => deleteUpload(i)}
+                      className="p-1 text-gray-500 hover:text-red-600"
+                    >
+                      <Trash size={20} />
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        {/* Next Button */}
+        <button
+          onClick={handleNext}
+          disabled={uploads.length === 0}
+          className={`w-full py-3 mt-auto rounded-lg font-medium text-white transition ${
+            uploads.length
+              ? "bg-[#192C63] hover:bg-[#162050]"
+              : "bg-gray-400 cursor-not-allowed"
+          }`}
+        >
+          Next
+        </button>
+      </div>
     </div>
   );
 }

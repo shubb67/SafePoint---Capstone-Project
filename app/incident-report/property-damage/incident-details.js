@@ -1,4 +1,4 @@
-// src/incident-report/IncidentDetails.js
+
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
@@ -8,7 +8,7 @@ import { Mic } from "lucide-react";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { db } from "@/_utils/firebase";
 
-export default function IncidentDetails() {
+export default function PropertyIncidentDetails() {
   const navigate = useNavigate();
   const dispatch = useIncidentDispatch();
   const { incidentType } = useIncidentState();
@@ -60,7 +60,7 @@ export default function IncidentDetails() {
   const handleNext = e => {
     e.preventDefault();
     dispatch({
-      type: "SET_DETAILS",
+      type: "SET_STEP_DATA",
       payload: { date, time, location, description, transcriptText, audioUrl },
     });
     navigate("/impact-info");

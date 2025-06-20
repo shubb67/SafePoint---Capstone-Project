@@ -104,7 +104,7 @@ export default function CreateAccount() {
                 value={firstName}
                 onChange={e => setFirstName(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md p-2
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               />
             </div>
             <div className="flex-1">
@@ -121,7 +121,7 @@ export default function CreateAccount() {
                 value={surname}
                 onChange={e => setSurname(e.target.value)}
                 className="mt-1 block w-full border border-gray-300 rounded-md p-2
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               />
             </div>
           </div>
@@ -163,7 +163,7 @@ export default function CreateAccount() {
                 value={email}
                 onChange={e => setEmail(e.target.value)}
                 className="pl-10 pr-3 py-2 block w-full border border-gray-300 rounded-md
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               />
             </div>
           </div>
@@ -182,7 +182,7 @@ export default function CreateAccount() {
                 value={countryCode}
                 onChange={e => setCountryCode(e.target.value)}
                 className="mt-1 block w-full text-gray-400 border border-gray-300 rounded-md p-2
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               >
                 <option>+1 (US)</option>
                 <option>+44 (UK)</option>
@@ -223,7 +223,7 @@ export default function CreateAccount() {
                   value={phoneNumber}
                   onChange={e => setPhoneNumber(e.target.value)}
                   className="pl-10 pr-3 py-2 block w-full border border-gray-300 rounded-md
-                             focus:border-blue-600 focus:ring focus:ring-blue-200"
+                             focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
                 />
               </div>
             </div>
@@ -244,7 +244,7 @@ export default function CreateAccount() {
               value={password}
               onChange={e => setPassword(e.target.value)}
               className="mt-1 block w-full border border-gray-300 rounded-md p-2
-                         focus:border-blue-600 focus:ring focus:ring-blue-200"
+                         focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
             />
           </div>
 
@@ -263,7 +263,7 @@ export default function CreateAccount() {
               value={confirmPassword}
               onChange={e => setConfirmPassword(e.target.value)}
               className="mt-1 block w-full border border-gray-300 rounded-md p-2
-                         focus:border-blue-600 focus:ring focus:ring-blue-200"
+                         focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
             />
           </div>
 

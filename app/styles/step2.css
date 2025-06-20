@@ -1,9 +1,0 @@
-/* src/Step2.css */
-
-/* 1) Re‐use all of CreateAccount.css */
-@import "./CreateAccount.css";
-
-/* 2) Override only the progress-bar-inner width for Step 2 */
-.progress-bar-inner.step2 {
-  width: 66.66%;     /* Two‐thirds “filled” */
-}

@@ -20,7 +20,14 @@ const initialState = {
     transcriptText: "",
   },
   impactInfo: {
-    // e.g. severity, cost, etc.
+    emergency:       "",             // “yes” / “no”
+    impactOps:       "",             // “none” / “minor” / “major”
+    severity:        "",             // “low” / “medium” / “high”
+    responseAction:  "",            
+    voice: {
+      url:           "",             
+      transcript:    ""              
+    }
   },
   evidence: [], // array of File or URL strings
 };

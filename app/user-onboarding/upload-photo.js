@@ -85,7 +85,7 @@ export default function UploadPhoto() {
       // 3) Update their Auth profile (displayName + photoURL)
       await updateProfile(user, {
         displayName: `${firstName} ${surname}`,
-        photoURL:    photoUrl || ""
+        photoURL:    photoUrl || null
       });
 
       // 4) Write the full user document in Firestore
@@ -176,12 +176,19 @@ export default function UploadPhoto() {
 
         {error && <p className="text-sm text-red-600 mb-4 text-center">{error}</p>}
 
+<p className="text-center text-gray-400 text-xs mb-3 px-2 mt-30">
+          By clicking ‘Create Account’, I am agreeing to SafePoint’s 
+<u>Legal Agreements</u> and <u>Terms & Conditions </u>
+        </p>
+
         {/* Skip */}
         <button
           onClick={() => handleComplete(true)}
           disabled={loading}
-          className="w-full py-3 mb-3 border border-[#192C63] rounded-lg text-[#192C63] font-medium
-                     hover:bg-gray-100 transition disabled:opacity-50"
+          className="w-full max-w-[360px] mb-3 px-0 py-3 text-base text-center font-semibold
+                         text-[#192C63] border-2 border-[#192C63] rounded-lg
+                         hover:bg-[#192C63] hover:text-white transition
+                         md:max-w-[400px] lg:max-w-[500px]"
         >
           Skip &amp; Create Account
         </button>

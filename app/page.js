@@ -24,6 +24,9 @@ import Evidence from "./incident-report/injury/evidence";
  import { Navigate } from "react-router-dom";
  export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
+import Submit from "./incident-report/injury/submit"
+import PropertyPersonalInfo from "./incident-report/property-damage/personal-info";
+import PropertyIncidentDetails from "./incident-report/property-damage/incident-details";
 
 function App() {
   if (typeof window === "undefined") {
@@ -47,6 +50,10 @@ function App() {
           <Route path="/details"       element={<IncidentDetails />} />
           <Route path="/impact-info"  element={<ImpactInfo />} />
           <Route path="/evidence"     element={<Evidence />} />
+          <Route path="/submit"       element={<Submit />} />
+          
+          <Route path="/property-damage/personal-info" element={<PropertyPersonalInfo />} />
+          <Route path="/property-damage/incident-details" element={<PropertyIncidentDetails />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

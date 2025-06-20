@@ -64,7 +64,7 @@ export default function CompanyInformation() {
                 value={[company,jobTitle,siteLocation][i]}
                 onChange={e => [setCompany,setJobTitle,setSiteLocation][i](e.target.value)}
                 className="mt-1 w-full border border-gray-300 rounded-lg p-2
-                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+                           focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               />
             </div>
           ))}

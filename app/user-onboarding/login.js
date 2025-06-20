@@ -1,37 +1,31 @@
 // src/Login.js
+"use client";
+
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { auth } from "@/_utils/firebase"; // Ensure auth is exported from firebase.js
-import "../styles/login.css";
+import { auth } from "@/_utils/firebase";
 
-const Login = () => {
+export default function Login() {
   const navigate = useNavigate();
-
-  // State for form fields + loading/error
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState("");
 
-  // Go back to the previous screen
-  const handleBack = () => {
-    navigate(-1);
-  };
+  const handleBack = () => navigate(-1);
 
-  // Handle the form submit
-  const handleSubmit = async (e) => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError("");
     if (!email.trim() || !password) {
       setError("Please enter both email and password.");
       return;
     }
+    setLoading(true);
     try {
-      setLoading(true);
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      // On success, navigate to home/dashboard
-      navigate("/incident-type"); // Adjust this path as needed
+      navigate("/incident-type");
     } catch (err) {
       console.error("Login error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
@@ -47,88 +41,113 @@ const Login = () => {
   };
 
   return (
-    <div className="login-container">
-      {/* Back Arrow */}
-      <div className="login-header">
-        <button
-          type="button"
-          className="back-button"
-          onClick={handleBack}
-          aria-label="Go back"
-        >
-          ←
-        </button>
-      </div>
+    <div className="min-h-screen bg-gray-50 flex flex-col px-4 py-8">
+      <div className="w-full max-w-md mx-auto">
+        {/* Back Arrow */}
+        <div className="flex items-center mb-8">
+          <button
+            onClick={handleBack}
+            className="text-2xl text-gray-800"
+            aria-label="Go back"
+          >
+            ←
+          </button>
+          <div className="flex-1" />
+        </div>
 
-      {/* Title & Subtitle */}
-      <div className="login-titles">
-        <h1 className="login-title">Welcome Back</h1>
-        <p className="login-subtitle">Enter your credential to continue</p>
-      </div>
+        {/* Title & Subtitle */}
+        <div className="text-center mb-8">
+          <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+            Welcome Back
+          </h1>
+          <p className="text-gray-600 text-sm">
+            Enter your credentials to continue
+          </p>
+        </div>
 
-      {/* Form */}
-      <form className="login-form" onSubmit={handleSubmit}>
-        {/* Email Address */}
-        <div className="form-group">
-          <label htmlFor="login-email">Email Address *</label>
-          <div className="input-with-icon">
-            <span className="icon email-icon" aria-hidden="true">
-              {/* Inline SVG email icon */}
-              <svg
-                width="20"
-                height="20"
-                viewBox="0 0 24 24"
-                fill="none"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path
-                  d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
-                  stroke="#555"
-                  strokeWidth="2"
-                />
-                <path d="M22 6L12 13L2 6" stroke="#555" strokeWidth="2" />
-              </svg>
-            </span>
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Email */}
+          <div>
+            <label
+              htmlFor="login-email"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Email Address *
+            </label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 pl-3 flex items-center text-gray-400">
+                <svg
+                  width="20"
+                  height="20"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path
+                    d="M4 4H20C21.1 4 22 4.9 22 6V18C22 19.1 21.1 20 20 20H4C2.9 20 2 19.1 2 18V6C2 4.9 2.9 4 4 4Z"
+                    stroke="#555"
+                    strokeWidth="2"
+                  />
+                  <path
+                    d="M22 6L12 13L2 6"
+                    stroke="#555"
+                    strokeWidth="2"
+                  />
+                </svg>
+              </span>
+              <input
+                id="login-email"
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="example@email.com"
+                required
+                className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-lg
+                           focus:border-blue-600 focus:ring focus:ring-blue-200"
+              />
+            </div>
+          </div>
+
+          {/* Password */}
+          <div>
+            <label
+              htmlFor="login-password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
+              Password *
+            </label>
             <input
-              type="email"
-              id="login-email"
-              name="login-email"
-              placeholder="example@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              id="login-password"
+              type="password"
+              value={password}
+              onChange={e => setPassword(e.target.value)}
+              placeholder="Enter Password"
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg
+                         focus:border-blue-600 focus:ring focus:ring-blue-200"
             />
           </div>
-        </div>
 
-        {/* Password */}
-        <div className="form-group">
-          <label htmlFor="login-password">Password *</label>
-          <input
-            type="password"
-            id="login-password"
-            name="login-password"
-            placeholder="Enter Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
+          {/* Error Message */}
+          {error && (
+            <p className="text-sm text-red-600">{error}</p>
+          )}
 
-        {/* Error Message */}
-        {error && <p className="error-text">{error}</p>}
-
-        {/* Login Button */}
-        <button
-          type="submit"
-          className="btn btn-primary login-button"
-          disabled={loading}
-        >
-          {loading ? "Logging in…" : "Login"}
-        </button>
-      </form>
+          {/* Login Button */}
+          <button
+            type="submit"
+            disabled={loading}
+            className={`w-full py-3 rounded-lg text-white font-medium transition
+              ${loading
+                ? "bg-gray-400 cursor-not-allowed"
+                : "bg-[#192C63] hover:bg-[#162050]"
+              }`}
+          >
+            {loading ? "Logging in…" : "Login"}
+          </button>
+        </form>
+      </div>
     </div>
   );
-};
-
-export default Login;
+}
