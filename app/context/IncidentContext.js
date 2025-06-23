@@ -30,6 +30,7 @@ const initialState = {
     }
   },
   evidence: [], // array of File or URL strings
+  reportId: "",
 };
 
 function incidentReducer(state, action) {
@@ -44,6 +45,13 @@ function incidentReducer(state, action) {
       return { ...state, impactInfo: action.payload };
     case "SET_EVIDENCE":
       return { ...state, evidence: action.payload };
+    case "SET_STEP_DATA":
+      return {
+       ...state,
+        [action.payload.step]: action.payload.data
+      };
+      case "SET_REPORT_ID":
+     return { ...state, reportId: action.payload };
     case "RESET":
       return initialState;
     default:

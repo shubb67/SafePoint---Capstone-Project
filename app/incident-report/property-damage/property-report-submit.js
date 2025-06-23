@@ -7,40 +7,38 @@ import { auth, db } from "@/_utils/firebase";
 import { useIncidentState, useIncidentDispatch } from "../../context/IncidentContext";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
 
-export default function ReportSubmitted() {
+export default function PropertyReportSubmitted() {
   const navigate = useNavigate();
   const incident = useIncidentState();
   const dispatch = useIncidentDispatch();
 
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
-
-  const didSubmitRef = useRef(false);
+ const didSubmitRef = useRef(false);
 
   // on mount: write a new report doc
   useEffect(() => {
     if (didSubmitRef.current) return;
       didSubmitRef.current = true;
-
     async function submitReport() {
       try {
         const user = auth.currentUser;
         if (!user) throw new Error("Not authenticated");
 
         const reportRef = await addDoc(collection(db, "reports"), {
-          reportId:  null, // will be set after doc creation
+          reportId:  null, // Firestore will auto-generate this
           userId:    user.uid,
           ...incident,
           createdAt: serverTimestamp(),
         });
-       console.log("Firestore gave me reportId:", reportRef.id );
+       console.log("Firestore gave me reportId:", reportRef.id);
         // now store it in context:
-        dispatch({ type: "SET_REPORT_ID", payload: reportRef.id  });
-        setLoading(false);
+        dispatch({ type: "SET_REPORT_ID", payload: reportRef.id });
+         setLoading(false);
       } catch (e) {
         console.error("Submit error:", e);
         setError(e.message);
-        setLoading(false);
+         setLoading(false);
       }
     }
     submitReport();

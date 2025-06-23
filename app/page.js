@@ -27,13 +27,25 @@ export const runtime = "nodejs";
 import Submit from "./incident-report/injury/submit"
 import PropertyPersonalInfo from "./incident-report/property-damage/personal-info";
 import PropertyIncidentDetails from "./incident-report/property-damage/incident-details";
+import ImpactResponse from "./incident-report/property-damage/impact-response";
+import PropertyEvidence from "./incident-report/property-damage/upload-evidence";
+import PropertyReportSubmitted from "./incident-report/property-damage/property-report-submit";
+import NearMissPersonalInfo from "./incident-report/near-miss/personal-info";
+import NearMissIncidentDetails from "./incident-report/near-miss/incident-details";
+import NearMissImpact from "./incident-report/near-miss/impact-response";
+import NearMissEvidence from "./incident-report/near-miss/upload-evidence";
+import NearMissReportSubmitted from "./incident-report/near-miss/report-submitted";
+import SafetyHazardsIncidentDetails from "./incident-report/safety-hazards/incident-details";
+import SafetyHazardPersonalInfo from "./incident-report/safety-hazards/personal-info";
+import SafetyHazardImpactResponse from "./incident-report/safety-hazards/safety-impact";
+import SafetyHazardEvidence from "./incident-report/safety-hazards/upload-evidence";
+import SafetyHazardReportSubmitted from "./incident-report/safety-hazards/safety-report-submitted";
 
 function App() {
   if (typeof window === "undefined") {
     return null;
   }
   return (
-
     <BrowserRouter>
      <IncidentProvider>
       <Routes>
@@ -51,9 +63,24 @@ function App() {
           <Route path="/impact-info"  element={<ImpactInfo />} />
           <Route path="/evidence"     element={<Evidence />} />
           <Route path="/submit"       element={<Submit />} />
-          
+
           <Route path="/property-damage/personal-info" element={<PropertyPersonalInfo />} />
           <Route path="/property-damage/incident-details" element={<PropertyIncidentDetails />} />
+          <Route path="/property-damage/impact-response" element={<ImpactResponse />} />
+          <Route path="/property-damage/upload-evidence" element={<PropertyEvidence />} />
+          <Route path="/property-damage/report-submitted" element={<PropertyReportSubmitted />} />
+
+          <Route path="/near-miss/personal-info" element={<NearMissPersonalInfo />} />
+          <Route path="/near-miss/incident-details" element={<NearMissIncidentDetails />} />
+          <Route path="/near-miss/impact-response" element={<NearMissImpact />} />
+          <Route path="/near-miss/upload-evidence" element={<NearMissEvidence />} />
+          <Route path="/near-miss/report-submitted" element={<NearMissReportSubmitted />} />
+
+          <Route path="/safety-hazards/personal-info" element={<SafetyHazardPersonalInfo />} />
+          <Route path="/safety-hazards/incident-details" element={<SafetyHazardsIncidentDetails />} />
+          <Route path="/safety-hazards/safety-impact" element={<SafetyHazardImpactResponse />} />
+          <Route path="/safety-hazards/upload-evidence" element={<SafetyHazardEvidence />} />
+          <Route path="/safety-hazards/safety-report-submitted" element={<SafetyHazardReportSubmitted />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

@@ -8,7 +8,7 @@ import { Mic } from "lucide-react";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { db } from "@/_utils/firebase";
 
-export default function PropertyIncidentDetails() {
+export default function SafetyHazardsIncidentDetails() {
   const navigate = useNavigate();
   const dispatch = useIncidentDispatch();
   const { incidentType } = useIncidentState();
@@ -63,10 +63,10 @@ export default function PropertyIncidentDetails() {
       type: "SET_STEP_DATA",
   payload: {
     step: "incidentDetails",
-    data: { date, time, locationId: location, description, transcriptText }
+    data: { date, time, locationId: location, description, audioUrl, transcriptText }
   }
 });
-navigate("/property-damage/impact-response");
+navigate("/safety-hazards/safety-impact");
   };
   const startRecording = async () => {
     setShowVoiceUI(true);
@@ -159,7 +159,7 @@ navigate("/property-damage/impact-response");
             ←
           </button>
           <h1 className="flex-1 text-xl font-semibold text-gray-900 text-center">
-            Incident Details
+            Safety Hazard Details
           </h1>
           <div style={{ width: "1.5rem" }} />
         </div>

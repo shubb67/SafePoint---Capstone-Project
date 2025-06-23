@@ -33,8 +33,8 @@ export default function IncidentType() {
        const routeMap = {
      injury:         "/personal-info",
      propertyDamage: "/property-damage/personal-info",
-     nearMiss:       "/near-miss-info",
-     safetyHazard:   "/hazard-info",
+     nearMiss:       "/near-miss/personal-info",
+     safetyHazard:   "/safety-hazards/personal-info",
    };
 
    // fall back to personal-info if none matched
