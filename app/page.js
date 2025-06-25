@@ -40,6 +40,8 @@ import SafetyHazardPersonalInfo from "./incident-report/safety-hazards/personal-
 import SafetyHazardImpactResponse from "./incident-report/safety-hazards/safety-impact";
 import SafetyHazardEvidence from "./incident-report/safety-hazards/upload-evidence";
 import SafetyHazardReportSubmitted from "./incident-report/safety-hazards/safety-report-submitted";
+import UserDashboard from "./user-dashboard/dashboard";
+import ForgotPassword from "./user-onboarding/forgot-password";
 
 function App() {
   if (typeof window === "undefined") {
@@ -56,6 +58,8 @@ function App() {
         <Route path="/upload-photo" element={<UploadPhoto />} />
         <Route path="/user-onboarded" element={<UserOnboared />} />
         <Route path="/login" element={<Login />} />
+
+
 
           <Route path="/incident-type"  element={<IncidentType />} />
           <Route path="/personal-info" element={<PersonalInformation />} />
@@ -81,6 +85,10 @@ function App() {
           <Route path="/safety-hazards/safety-impact" element={<SafetyHazardImpactResponse />} />
           <Route path="/safety-hazards/upload-evidence" element={<SafetyHazardEvidence />} />
           <Route path="/safety-hazards/safety-report-submitted" element={<SafetyHazardReportSubmitted />} />
+
+          <Route path="/user-dashboard" element={<UserDashboard />} />
+
+          <Route path="/forgot-password" element={<ForgotPassword />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

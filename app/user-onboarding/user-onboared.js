@@ -38,7 +38,7 @@ export default function FinalStep() {
   }, []);
 
   const handleComplete = () => {
-    navigate("/");
+    navigate("/user-dashboard");
   };
 
   return (

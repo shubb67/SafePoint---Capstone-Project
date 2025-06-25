@@ -5,6 +5,7 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/_utils/firebase";
+import { Link } from "react-router-dom";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -25,7 +26,7 @@ export default function Login() {
     setLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      navigate("/incident-type");
+      navigate("/user-dashboard");
     } catch (err) {
       console.error("Login error:", err);
       if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
@@ -128,6 +129,12 @@ export default function Login() {
                          focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
             />
           </div>
+          <div className="text-center">
+            <Link to="/forgot-password" className="text-[#192C63] hover:underline">
+            Forgot your password?{" "}
+            </Link>
+            </div>
+
 
           {/* Error Message */}
           {error && (
