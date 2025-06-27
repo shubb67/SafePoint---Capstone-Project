@@ -42,6 +42,7 @@ import SafetyHazardEvidence from "./incident-report/safety-hazards/upload-eviden
 import SafetyHazardReportSubmitted from "./incident-report/safety-hazards/safety-report-submitted";
 import UserDashboard from "./user-dashboard/dashboard";
 import ForgotPassword from "./user-onboarding/forgot-password";
+import ProfileScreen from "./profile";
 
 function App() {
   if (typeof window === "undefined") {
@@ -87,6 +88,7 @@ function App() {
           <Route path="/safety-hazards/safety-report-submitted" element={<SafetyHazardReportSubmitted />} />
 
           <Route path="/user-dashboard" element={<UserDashboard />} />
+          <Route path="/profile" element={<ProfileScreen />} />
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
 

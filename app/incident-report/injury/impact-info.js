@@ -270,7 +270,7 @@ export default function ImpactInfo() {
               </button>
             </div>
           )}
-               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+              
         
           <button
             type="submit"
@@ -278,7 +278,7 @@ export default function ImpactInfo() {
           >
             Next
           </button>
-          </div>
+         
         </form>
       </div>
 

@@ -254,15 +254,14 @@ const [description, setDescription] = useState("");
               </button>
             </div>
           )}
-               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
-        
+               
           <button
             type="submit"
             className="w-full py-3 bg-[#192C63] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
           >
             Next
           </button>
-          </div>
+         
         </form>
       </div>
 

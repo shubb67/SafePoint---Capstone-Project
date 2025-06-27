@@ -54,7 +54,7 @@ export default function ReportSubmitted() {
 
   const handleDone = () => {
     // you could also clear context here if desired
-    navigate("/");
+    navigate("/user-dashboard");
   };
 
   return (

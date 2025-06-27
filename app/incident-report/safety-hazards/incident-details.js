@@ -70,7 +70,7 @@ export default function SafetyHazardsIncidentDetails() {
       type: "SET_STEP_DATA",
   payload: {
     step: "incidentDetails",
-    data: { date, time, locationId: location, description, audioUrl, transcriptText }
+    data: { date, time, location: location, description, audioUrl, transcriptText }
   }
 });
 navigate("/safety-hazards/safety-impact");

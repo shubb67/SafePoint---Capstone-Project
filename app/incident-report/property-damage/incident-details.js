@@ -69,7 +69,7 @@ export default function PropertyIncidentDetails() {
       type: "SET_STEP_DATA",
   payload: {
     step: "incidentDetails",
-    data: { date, time, locationId: location, description, transcriptText }
+    data: { date, time, location: location, description, transcriptText }
   }
 });
 navigate("/property-damage/impact-response");

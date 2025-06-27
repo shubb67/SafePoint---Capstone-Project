@@ -69,7 +69,7 @@ export default function NearMissIncidentDetails() {
       type: "SET_STEP_DATA",
   payload: {
     step: "incidentDetails",
-    data: { date, time, locationId: location, description, audioUrl, transcriptText }
+    data: { date, time, location: location, description, audioUrl, transcriptText }
   }
 });
 navigate("/near-miss/impact-response");

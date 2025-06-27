@@ -19,12 +19,14 @@ export default function NearMissImpact() {
   const [response, setResponse]       = useState("");
     const [modalOpen, setModalOpen] = useState(false);
     const [audioName, setAudioName] = useState("voice.webm");
+      const [processing, setProcessing]         = useState(false);
 
   // ─── Voice‐note state ─────────────────────────
     const [transcriptText, setTranscriptText] = useState("");
      const [description, setDescription] = useState("");
     const [audioUrl, setAudioUrl]             = useState("");
       const [showRecorder, setShowRecorder] = useState(true);
+
 
   // animated dots
   const useDots = () => {
@@ -215,7 +217,7 @@ export default function NearMissImpact() {
               </button>
             </div>
           )}
-               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+               
         
           <button
             type="submit"
@@ -223,7 +225,6 @@ export default function NearMissImpact() {
           >
             Next
           </button>
-          </div>
         </form>
       </div>
 
