@@ -14,6 +14,7 @@ export default function ReportSubmitted() {
 
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState("");
+   const { reportId } = useIncidentState();
 
   const didSubmitRef = useRef(false);
 
@@ -46,62 +47,62 @@ export default function ReportSubmitted() {
     submitReport();
   }, []);
 
+  useEffect(() => {
+    const audio = new Audio("/assets/sounds/success.mp3");
+    audio.play().catch((e) => console.warn("Audio play failed:", e));
+  }, []);
+
   const handleDone = () => {
     // you could also clear context here if desired
     navigate("/");
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50 px-4 pt-6 pb-8">
-      <div className="max-w-md w-full mx-auto flex flex-col flex-1">
-        {/* Progress Bar */}
-        <div className="space-y-2 mb-6">
-          <span className="block text-center text-sm text-gray-700">
+ <div className="min-h-screen bg-gray-50 flex flex-col items-center px-4 py-8">
+      <div className="w-full max-w-lg text-center">
+        {/* Step Indicator */}
+        <div className="mb-6">
+          <span className="block text-sm text-gray-700 mb-2">
             Step 6 of 6
           </span>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
-            {/* full width once loading=false */}
-            <div
-              className={`h-full bg-[#192C63] transition-all duration-500 ${
-                loading ? "w-5/6" : "w-full"
-              } rounded-full`}
-            />
+            <div className="h-full bg-[#192C63] w-full rounded-full" />
           </div>
         </div>
 
-        {/* Back & Title */}
-        <div className="flex items-center mb-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-2xl text-gray-800"
-          >
-            ←
-          </button>
-          <h1 className="flex-1 text-center text-xl font-semibold text-gray-900">
-            {error ? "Submission Error" : "Report Submitted"}
-          </h1>
-          <div style={{ width: "1.5rem" }} />
-        </div>
+        {/* Header */}
+        <h1 className="text-xl font-semibold text-gray-900 mb-1 mt-15">
+          Your Report has been<br />Submitted
+        </h1>
 
-        {/* Subtitle */}
-        <p className="text-center text-gray-600 text-sm mb-8">
-          {error
-            ? error
-            : "We appreciate you taking the time to help keep the workplace safe. Our team will review the information and follow up if needed."}
+        {/* Report ID */}
+       <p className="text-sm text-gray-500 mb-6">
+          Report ID: <span className="font-semibold">{reportId || "#0000"}</span>
         </p>
 
-        {/* Placeholder / Illustration */}
-        <div className="flex-1 flex items-center justify-center">
-          <div className="w-full h-64 bg-gray-300 rounded-lg" />
+        {/* Check Icon Circle */}
+        <div className="w-60 h-60 bg-green-400 rounded-full flex items-center justify-center mx-auto mb-8">
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            className="h-40 w-40 text-white"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+          >
+            <path d="M20.285 6.709a1 1 0 00-1.414-1.418L9 15.166l-3.871-3.87a1 1 0 10-1.414 1.414l4.578 4.578a1 1 0 001.414 0l10.578-10.579z" />
+          </svg>
         </div>
 
-        {/* Done Button */}
+        {/* Back Button */}
+                       <div className="absolute bottom-2 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+        
         <button
           onClick={handleDone}
-          className="w-full py-3 mt-8 bg-[#192C63] text-white rounded-lg font-medium hover:bg-[#162050] transition"
+          className="w-full py-3 bg-[#192C63] text-white rounded-md font-medium
+                     hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
         >
-          Done
+          Back to Home
         </button>
+        </div>
       </div>
     </div>
   );

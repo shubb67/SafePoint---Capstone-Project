@@ -1,12 +1,12 @@
 export default {
   content: [
-    './app/**/*.{js,jsx}',
+     "./src/**/*.{js,jsx,ts,tsx,html}",
+    "./public/index.html",
   ],
   theme: {
     extend: {
-      colors: {
-        primary: '#1a2634',
-        'primary-dark': '#16202a',
+      backgroundImage: {
+        'gradient-custom': 'var(--gradient, linear-gradient(90deg, #192C63 0%, #006EFE 100%))',
       },
     },
   },

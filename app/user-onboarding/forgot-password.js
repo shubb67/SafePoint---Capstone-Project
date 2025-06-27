@@ -55,12 +55,12 @@ export default function ForgotPassword() {
         </button>
 
         {/* Title */}
-        <h1 className="text-2xl font-semibold text-gray-900 mb-2">
+        <h1 className="text-2xl font-semibold text-gray-900 mb-2 text-center">
           Forgot Password
         </h1>
 
         {/* Subtitle */}
-        <p className="text-sm text-gray-600 mb-6">
+        <p className="text-sm text-gray-600 mb-6 text-center">
           Please enter your account email address to reset
         </p>
 

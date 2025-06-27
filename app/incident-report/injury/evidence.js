@@ -103,7 +103,7 @@ export default function Evidence() {
   // finish step
   const handleNext = () => {
     dispatch({ type: "SET_EVIDENCE", payload: uploads });
-    navigate("/submit"); // adjust path to your next route
+    navigate("/injury/report-submitted"); // adjust path to your next route
   };
 
   return (
@@ -243,7 +243,8 @@ export default function Evidence() {
             </div>
           </div>
         )}
-
+               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+        
         {/* Next Button */}
         <button
           onClick={handleNext}
@@ -256,6 +257,7 @@ export default function Evidence() {
         >
           Next
         </button>
+        </div>
       </div>
     </div>
   );

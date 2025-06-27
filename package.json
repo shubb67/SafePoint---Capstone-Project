@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.830.0",
+    "@headlessui/react": "^2.2.4",
     "axios": "^1.10.0",
     "cloudinary": "^2.6.1",
     "env": "^0.0.2",

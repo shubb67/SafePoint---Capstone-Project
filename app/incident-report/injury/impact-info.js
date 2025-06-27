@@ -7,11 +7,17 @@ import { collection, getDocs } from "firebase/firestore";
 import { Mic } from "lucide-react";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { db } from "@/_utils/firebase";
+import VoiceRecorderModal from "../../components/VoiceRecorderModal";
+import { Trash2, Volume2 } from "lucide-react";
+
 
 export default function ImpactInfo() {
   const navigate = useNavigate();
   const dispatch = useIncidentDispatch();
   const { impactInfo, incidentType } = useIncidentState();
+  const [modalOpen, setModalOpen] = useState(false);
+  const [audioName, setAudioName] = useState("voice.webm");
+
 
   // Form state (prefilled if available)
   const [emergency, setEmergency]           = useState(impactInfo.emergency || "");
@@ -24,11 +30,10 @@ export default function ImpactInfo() {
   const [isRecording, setIsRecording]       = useState(false);
   const [processing, setProcessing]         = useState(false);
   const [transcriptText, setTranscriptText] = useState("");
+   const [description, setDescription] = useState("");
   const [audioUrl, setAudioUrl]             = useState("");
+    const [showRecorder, setShowRecorder] = useState(true);
 
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef   = useRef([]);
-  const streamRef        = useRef(null);
 
   // Animated dots while processing
   const useDots = () => {
@@ -41,17 +46,6 @@ export default function ImpactInfo() {
     return dots;
   };
   const dots = useDots();
-
-  // S3 upload helper
-  const uploadToS3 = async ({ fileName, fileType, base64, category, step }) => {
-    const res = await fetch("/api/aws", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ fileName, fileType, base64, incidentType, category, step }),
-    });
-    const { url } = await res.json();
-    return url;
-  };
 
   // Fetch locations if needed (not shown in UI)
   const [locations, setLocations] = useState([]);
@@ -79,69 +73,46 @@ export default function ImpactInfo() {
         voice: { url: audioUrl, transcript: transcriptText },
       },
     });
-    navigate("/evidence");
+    navigate("/injury/evidence");
   };
 
-  const startRecording = async () => {
-    setShowVoiceUI(true);
-    setIsRecording(true);
-    setProcessing(false);
-    setTranscriptText("");
-    setAudioUrl("");
-    audioChunksRef.current = [];
+  const handleModalSubmit = ({ audioBlob, transcriptText }) => {
+    setTranscriptText(transcriptText);
 
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    streamRef.current = stream;
-    const recorder = new MediaRecorder(stream);
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = e => {
-      if (e.data.size) audioChunksRef.current.push(e.data);
-    };
-
-    recorder.onstop = async () => {
-      setIsRecording(false);
-      setProcessing(true);
-
-      // Transcription
-      const blob = new Blob(audioChunksRef.current, { type: "audio/webm" });
-      const form = new FormData();
-      form.append("audio", blob, "voice.webm");
+    const reader = new FileReader();
+    reader.readAsDataURL(audioBlob);
+    reader.onloadend = async () => {
+      const base64 = reader.result;
       try {
-        const r = await fetch("/api/speech", { method: "POST", body: form });
-        const { transcription } = await r.json();
-        setTranscriptText(transcription || "");
-      } catch {
-        setTranscriptText("");
-      }
-
-      // S3 Upload
-      const reader = new FileReader();
-      reader.readAsDataURL(blob);
-      reader.onloadend = async () => {
-        try {
-          const url = await uploadToS3({
+        const res = await fetch("/api/aws", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
             fileName: "voice.webm",
-            fileType: blob.type,
-            base64:   reader.result,
+            fileType: audioBlob.type,
+            base64,
+            incidentType,
             category: "voiceNotes",
-            step:     "impact-info",
-          });
-          setAudioUrl(url);
-        } catch (err) {
-          console.error("Upload failed:", err);
-        } finally {
-          setProcessing(false);
-        }
-      };
+            step: "impact-info",
+          }),
+        });
+        const { url } = await res.json();
+        setAudioUrl(url);
+        setAudioName("voice.webm");
+        setShowRecorder(false);
+      } catch (err) {
+        console.error("S3 upload failed:", err);
+      }
     };
 
-    recorder.start();
+    setModalOpen(false);
   };
 
-  const stopRecording = () => {
-    mediaRecorderRef.current?.stop();
-    streamRef.current?.getTracks().forEach(t => t.stop());
+  const handleDeleteAudio = () => {
+    setAudioUrl("");
+    setAudioName("");
+    setTranscriptText("");
+    setShowRecorder(true);
   };
 
   return (
@@ -248,89 +219,74 @@ export default function ImpactInfo() {
             </select>
           </div>
 
-          {/* Response Action */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Response Action Taken
-            </label>
-            <textarea
-              rows={4}
-              placeholder="Write here…"
-              value={responseAction}
-              onChange={e => setResponseAction(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg p-2
-                         focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
-            />
-          </div>
-
-          {/* OR Divider */}
-          <div className="flex items-center my-4">
-            <div className="flex-1 h-px bg-gray-300" />
-            <span className="px-3 text-gray-500">Or</span>
-            <div className="flex-1 h-px bg-gray-300" />
-          </div>
-
-          {/* record voice note */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Record Voice Note
-            </label>
-            <button
-              type="button"
-              onClick={isRecording ? stopRecording : startRecording}
-              className={
-                "w-full border border-gray-300 rounded-lg px-3 py-2 text-center font-medium transition " +
-                (isRecording
-                  ? "bg-red-500 text-white"
-                  : "bg-white text-gray-700 hover:shadow-sm")
-              }
-            >
-              {isRecording ? "Stop Recording" : "Record…"}
-            </button>
-
-            {/* Transcript Preview */}
-            {transcriptText && (
-              <div className="mt-4 bg-white border border-gray-200 rounded-lg p-3 shadow-sm">
-                <h3 className="text-sm font-medium text-gray-700 mb-1">
-                  Transcript
-                </h3>
-                <p className="text-gray-800 text-sm">{transcriptText}</p>
+ {!audioUrl && (
+            <>
+              <div>
+                <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+                  Response Actions Taken
+                </label>
+                <textarea
+                  id="description"
+                  rows={4}
+                  placeholder="Write here…"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#192C63] focus:border-[#192C63] text-black"
+                />
               </div>
-            )}
-          </div>
 
-          {/* Next Button */}
+              <div className="flex items-center">
+                <div className="flex-1 h-px bg-gray-300" />
+                <span className="px-3 text-gray-500">Or</span>
+                <div className="flex-1 h-px bg-gray-300" />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Don’t want to type? Just speak.
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(true)}
+                  className="w-full px-4 py-3 gap-[10px] text-white bg-gradient-to-r from-[#192C63] to-[#006EFE] rounded-[5px] hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-[#192C63]"
+                >
+                  Describe by Voice
+                </button>
+              </div>
+            </>
+          )}
+
+          {audioUrl && (
+            <div className="p-3 bg-gray-100 rounded flex justify-between items-center">
+              <div className="flex items-center gap-2 text-black">
+                <Volume2 />
+                <div>
+                  <p className="text-sm text-black">{audioName}</p>
+                  <p className="text-xs text-gray-500">Audio uploaded</p>
+                </div>
+              </div>
+              <button onClick={handleDeleteAudio}>
+                <Trash2 className="text-red-500" />
+              </button>
+            </div>
+          )}
+               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+        
           <button
             type="submit"
-            className="w-full py-3 bg-[#192C63] text-white rounded-lg font-medium
-                       hover:bg-[#162050] transition"
+            className="w-full py-3 bg-[#192C63] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
           >
             Next
           </button>
+          </div>
         </form>
       </div>
 
-      {/* Overlay UI */}
-      {showVoiceUI && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex flex-col items-center justify-center text-white px-4">
-          <Mic className="h-16 w-16 animate-pulse mb-6" />
-          <p className="text-lg text-center">
-            {isRecording
-              ? "🎙️ Listening..."
-              : processing
-              ? `⏳ Processing${dots}`
-              : transcriptText
-              ? "✔️ Done Listening"
-              : "❌ Failed"}
-          </p>
-          <button
-            onClick={isRecording ? stopRecording : () => setShowVoiceUI(false)}
-            className="mt-8 px-6 py-3 bg-white text-black rounded-full font-medium hover:bg-gray-200 transition"
-          >
-            {isRecording ? "Done" : "Close"}
-          </button>
-        </div>
-      )}
+      <VoiceRecorderModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        onSubmit={handleModalSubmit}
+      />
     </div>
   );
 }

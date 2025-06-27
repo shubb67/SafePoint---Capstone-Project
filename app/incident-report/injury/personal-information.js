@@ -39,7 +39,7 @@ export default function PersonalInfo() {
       type: "SET_PERSONAL",
       payload: { yourName, wasInjured, injuredPersons, witnesses },
     });
-    navigate("/details", { state: previous });
+    navigate("/injury/incident-details", { state: previous });
   };
 
   const canProceed =
@@ -174,6 +174,7 @@ export default function PersonalInfo() {
           </div>
 
           {/* Next */}
+               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
           <button
             type="submit"
             disabled={!canProceed}
@@ -186,6 +187,7 @@ export default function PersonalInfo() {
           >
             Next
           </button>
+          </div>
         </form>
       </div>
     </div>

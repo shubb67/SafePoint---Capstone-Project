@@ -31,7 +31,7 @@ export default function IncidentType() {
   const handleNext = () => {
     if (!selectedType) return;
        const routeMap = {
-     injury:         "/personal-info",
+     injury:         "/injury/personal-info",
      propertyDamage: "/property-damage/personal-info",
      nearMiss:       "/near-miss/personal-info",
      safetyHazard:   "/safety-hazards/personal-info",

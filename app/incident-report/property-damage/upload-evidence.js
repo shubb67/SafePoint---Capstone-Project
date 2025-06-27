@@ -245,6 +245,8 @@ export default function PropertyEvidence() {
         )}
 
         {/* Next Button */}
+                       <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
+        
         <button
           onClick={handleNext}
           disabled={uploads.length === 0}
@@ -256,6 +258,7 @@ export default function PropertyEvidence() {
         >
           Next
         </button>
+        </div>
       </div>
     </div>
   );

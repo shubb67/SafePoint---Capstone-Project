@@ -62,11 +62,11 @@ function App() {
 
 
           <Route path="/incident-type"  element={<IncidentType />} />
-          <Route path="/personal-info" element={<PersonalInformation />} />
-          <Route path="/details"       element={<IncidentDetails />} />
-          <Route path="/impact-info"  element={<ImpactInfo />} />
-          <Route path="/evidence"     element={<Evidence />} />
-          <Route path="/submit"       element={<Submit />} />
+          <Route path="/injury/personal-info" element={<PersonalInformation />} />
+          <Route path="/injury/incident-details"       element={<IncidentDetails />} />
+          <Route path="/injury/impact-info"  element={<ImpactInfo />} />
+          <Route path="/injury/evidence"     element={<Evidence />} />
+          <Route path="/injury/report-submitted"       element={<Submit />} />
 
           <Route path="/property-damage/personal-info" element={<PropertyPersonalInfo />} />
           <Route path="/property-damage/incident-details" element={<PropertyIncidentDetails />} />

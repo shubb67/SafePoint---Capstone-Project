@@ -171,12 +171,7 @@ export default function UserDashboard() {
             <FileText className="w-6 h-6" />
             <span className="text-xs">Reports</span>
           </Link>
-          <button
-            onClick={() => navigate("/incident-type")}
-            className="relative -mt-6 bg-[#192C63] text-white rounded-full p-3 shadow-lg"
-          >
-            <PlusCircle className="w-8 h-8" />
-          </button>
+          
           <Link
             to="/chats"
             className="flex flex-col items-center text-gray-500 hover:text-[#192C63]"
