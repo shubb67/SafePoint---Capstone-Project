@@ -33,6 +33,8 @@ export default function UserDashboard() {
   const [recentIncidents, setRecentIncidents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  const imgUrl = img => (img && (img.src || img.default)) || img || "";
+
   const incidentTypeIcons = {
     injury: injuryIcon,
     safetyHazard: hazardIcon,
@@ -203,15 +205,15 @@ export default function UserDashboard() {
               className="bg-white rounded-xl shadow p-4 flex items-center justify-between"
             >
               <div className="flex items-center space-x-3">
-                <div className="p-2 bg-gray-100 rounded-full">
+                <div className="bg-gray-100">
                   <img
-                    src={incidentTypeIcons[type] || hazardIcon}
+                    src={imgUrl(incidentTypeIcons[type])}
                     alt={type}
-                    className="w-5 h-5 object-contain"
+                    className="w-10 h-10 object-fill border rounded-lg"
                   />
                 </div>
                 <div>
-                  <p className="font-medium text-gray-800">{type}</p>
+                  <p className="font-bold text-black">{type}</p>
                   <p className="text-xs text-gray-500">{location}</p>
                 </div>
               </div>

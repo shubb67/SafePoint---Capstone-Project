@@ -107,7 +107,7 @@ export default function ProfileScreen() {
 
 <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
-          <Link to="/" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+          <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
             <HomeIcon className="w-6 h-6" />
             <span className="text-xs">Home</span>
           </Link>

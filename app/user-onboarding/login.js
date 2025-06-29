@@ -6,6 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { auth } from "@/_utils/firebase";
 import { Link } from "react-router-dom";
+import { collection, doc, getDoc } from "firebase/firestore";
+import { db } from "@/_utils/firebase";
+
 
 export default function Login() {
   const navigate = useNavigate();
@@ -17,29 +20,42 @@ export default function Login() {
   const handleBack = () => navigate(-1);
 
   const handleSubmit = async e => {
-    e.preventDefault();
-    setError("");
-    if (!email.trim() || !password) {
-      setError("Please enter both email and password.");
-      return;
-    }
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
+  e.preventDefault();
+  setError("");
+
+  if (!email.trim() || !password) {
+    setError("Please enter both email and password.");
+    return;
+  }
+
+  setLoading(true);
+  try {
+    const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+    const user = userCredential.user;
+
+    // Fetch user role from Firestore
+    const userDoc = await getDoc(doc(collection(db, "users"), user.uid));
+    const userData = userDoc.data();
+
+    if (userData?.role === "admin") {
+      navigate("/admin");
+    } else {
       navigate("/user-dashboard");
-    } catch (err) {
-      console.error("Login error:", err);
-      if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
-        setError("Incorrect email or password.");
-      } else if (err.code === "auth/invalid-email") {
-        setError("Please enter a valid email address.");
-      } else {
-        setError("Failed to login. Please try again.");
-      }
-    } finally {
-      setLoading(false);
     }
-  };
+  } catch (err) {
+    console.error("Login error:", err);
+    if (err.code === "auth/user-not-found" || err.code === "auth/wrong-password") {
+      setError("Incorrect email or password.");
+    } else if (err.code === "auth/invalid-email") {
+      setError("Please enter a valid email address.");
+    } else {
+      setError("Failed to login. Please try again.");
+    }
+  } finally {
+    setLoading(false);
+  }
+    }
+  
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col px-4 py-8">
@@ -159,4 +175,5 @@ export default function Login() {
       </div>
     </div>
   );
+
 }

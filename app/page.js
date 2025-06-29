@@ -43,6 +43,15 @@ import SafetyHazardReportSubmitted from "./incident-report/safety-hazards/safety
 import UserDashboard from "./user-dashboard/dashboard";
 import ForgotPassword from "./user-onboarding/forgot-password";
 import ProfileScreen from "./profile";
+import AdminDashboard from "./admin-dashboard/AdminDashboard";
+import ChatsSection from "./admin-dashboard/components/ChatsSection";
+import IncidentsByLocationChart from "./admin-dashboard/components/IncidentByLocationChart";
+import IncidentsOverTimeChart from "./admin-dashboard/components/IncidentOverTimeChart";
+import SafetyRecord from "./admin-dashboard/components/SafetyRecord";
+import SubmittedIncidents from "./admin-dashboard/components/SubmittedIncidents";
+import IncidentTracker from "./admin-dashboard/components/IncidentTracker";
+import ProtectedAdminRoute from "./admin-dashboard/components/ProtectedAdminRoute";
+
 
 function App() {
   if (typeof window === "undefined") {
@@ -91,6 +100,15 @@ function App() {
           <Route path="/profile" element={<ProfileScreen />} />
 
           <Route path="/forgot-password" element={<ForgotPassword />} />
+
+      <Route path="/admin-dashboard" element={<AdminDashboard />} />
+          <Route path="/admin-dashboard/chats" element={<ChatsSection />} />
+          <Route path="/admin-dashboard/incidents-by-location" element={<IncidentsByLocationChart />} />
+          <Route path="/admin-dashboard/incidents-over-time" element={<IncidentsOverTimeChart />} />
+          <Route path="/admin-dashboard/safety-record" element={<SafetyRecord />} />
+          <Route path="/admin-dashboard/submitted-incidents" element={<SubmittedIncidents />} />
+          <Route path="/admin-dashboard/incident-tracker" element={<IncidentTracker />} />
+
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

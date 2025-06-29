@@ -5,7 +5,7 @@ import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { auth, db } from "@/_utils/firebase";
 import { useIncidentState, useIncidentDispatch } from "../../context/IncidentContext";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
 
 export default function ReportSubmitted() {
   const navigate = useNavigate();
@@ -34,7 +34,7 @@ export default function ReportSubmitted() {
           ...incident,
           createdAt: serverTimestamp(),
         });
-       console.log("Firestore gave me reportId:", reportRef.id );
+       await updateDoc(reportRef, { reportId: reportRef.id });
         // now store it in context:
         dispatch({ type: "SET_REPORT_ID", payload: reportRef.id  });
         setLoading(false);
