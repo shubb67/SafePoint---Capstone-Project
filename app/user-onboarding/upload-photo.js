@@ -13,6 +13,14 @@ import {
   serverTimestamp
 } from "firebase/firestore";
 import { auth, db } from "@/_utils/firebase"; // Adjust the import path as needed
+import {
+  collection,
+  getDocs,
+  query,
+  where,
+  addDoc
+} from "firebase/firestore";
+
 
 export default function UploadPhoto() {
   const navigate = useNavigate();
@@ -81,12 +89,33 @@ export default function UploadPhoto() {
           `users/${uid}/profile/images`
         );
       }
+      
 
       // 3) Update their Auth profile (displayName + photoURL)
       await updateProfile(user, {
         displayName: `${firstName} ${surname}`,
         photoURL:    photoUrl || null
       });
+
+         const orgQuery = query(
+        collection(db, "organizations"),
+        where("name", "==", company)
+      );
+      const orgSnap  = await getDocs(orgQuery);
+      let orgId;
+      let role;
+      if (orgSnap.empty) {
+        const orgRef = await addDoc(collection(db, "organizations"), {
+          name:      company,
+          adminIds:  [uid],
+          createdAt: serverTimestamp(),
+        });
+        orgId = orgRef.id;
+        role  = "admin";
+      } else {
+        orgId = orgSnap.docs[0].id;
+        role  = "user";
+      }
 
       // 4) Write the full user document in Firestore
       await setDoc(
@@ -99,8 +128,10 @@ export default function UploadPhoto() {
           company,
           jobTitle,
           siteLocation,
+          organizationId: orgId,
+          role,
           photoUrl:      photoUrl || null,
-          createdAt:     serverTimestamp()
+          createdAt:     serverTimestamp(),
         },
         { merge: true }
       );

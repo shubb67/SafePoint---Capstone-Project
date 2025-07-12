@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { auth, db } from "@/_utils/firebase";
 import { useIncidentState, useIncidentDispatch } from "../../context/IncidentContext";
 import { collection, addDoc, serverTimestamp, updateDoc } from "firebase/firestore";
+import { getDoc, doc } from "firebase/firestore";
+
 
 export default function ReportSubmitted() {
   const navigate = useNavigate();
@@ -27,10 +29,12 @@ export default function ReportSubmitted() {
       try {
         const user = auth.currentUser;
         if (!user) throw new Error("Not authenticated");
-
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const orgId = userSnap.data()?.organizationId || null;
         const reportRef = await addDoc(collection(db, "reports"), {
-          reportId:  null, // will be set after doc creation
-          userId:    user.uid,
+          reportId:       null, // will be set after doc creation
+          userId:         user.uid,
+          organizationId: orgId,
           ...incident,
           createdAt: serverTimestamp(),
         });

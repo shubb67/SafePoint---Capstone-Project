@@ -1,21 +1,38 @@
 import { NavLink, Outlet } from "react-router-dom";
+import { useState } from "react";
+import { Bell, User, HelpCircle, Search } from "lucide-react";
+
 
 export default function AdminSidebarLayout() {
+  const [searchQuery, setSearchQuery] = useState("");
+  
   return (
     <div className="flex min-h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-[#192C63] text-white p-4 space-y-4">
-        <h2 className="text-xl font-bold mb-6">Admin Panel</h2>
-        <NavLink to="/admin" className="block hover:bg-gray-700 p-2 rounded">Dashboard</NavLink>
-        <NavLink to="/admin/incidents" className="block hover:bg-gray-700 p-2 rounded">Incidents</NavLink>
-        <NavLink to="/admin/charts" className="block hover:bg-gray-700 p-2 rounded">Analytics</NavLink>
-        <NavLink to="/admin/settings" className="block hover:bg-gray-700 p-2 rounded">Settings</NavLink>
-      </aside>
+      {/* Header */}
+      <header className="bg-[#1a2b5c] text-white">
+        <div className="flex items-center justify-between px-6 py-3">
+          <h1 className="text-xl font-semibold">SafePoint</h1>
+          <div className="flex items-center gap-4">
+            <Bell className="w-5 h-5 cursor-pointer" />
+            <User className="w-5 h-5 cursor-pointer" />
+            <HelpCircle className="w-5 h-5 cursor-pointer" />
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-10 pr-4 py-1.5 rounded text-black text-sm w-64"
+              />
+            </div>
+            <button className="bg-[#4267b2] px-4 py-1.5 rounded text-sm">
+              ☰
+            </button>
+          </div>
+        </div>
+      </header>
 
-      {/* Main Content */}
-      <main className="flex-1 p-6">
-        <Outlet />
-      </main>
     </div>
   );
 }

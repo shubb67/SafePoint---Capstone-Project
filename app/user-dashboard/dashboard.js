@@ -1,5 +1,4 @@
-
-// Fixed and cleaned-up UserDashboard.jsx
+// Updated UserDashboard.jsx - Shows incidents from all users in the same organization
 
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -32,6 +31,7 @@ export default function UserDashboard() {
   const [prevRecordDays, setPrevRecordDays] = useState(0);
   const [recentIncidents, setRecentIncidents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [allOrgLocations, setAllOrgLocations] = useState([]); // New state to store all unique locations
 
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
@@ -51,31 +51,63 @@ export default function UserDashboard() {
       const currentUser = auth.currentUser;
       if (!currentUser) return;
 
+      // Get current user's data first
       const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
       const user = userSnap.docs[0]?.data();
+      const userCompany = user?.company;
+      
       setUserName(user?.firstName || "User");
-      setProjectName(user?.company || "Unknown Project");
+      setProjectName(userCompany || "Unknown Project");
       setProjectSite(user?.siteLocation || "Unknown Site");
 
+      if (!userCompany) {
+        console.warn("User company not found, cannot fetch organization incidents");
+        setIsLoading(false);
+        return;
+      }
+
+      // Get all users from the same company/organization
+      const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", userCompany)));
+      const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
+
+      if (orgUserIds.length === 0) {
+        setIsLoading(false);
+        return;
+      }
+
+      // Fetch incidents from all users in the organization
+      // Note: Firestore has a limit of 10 items for 'in' queries, so if you have more than 10 users,
+      // you'll need to batch the queries or restructure your data
       const incidentsSnap = await getDocs(
         query(
           collection(db, "reports"),
-          where("userId", "==", currentUser.uid),
-          orderBy("createdAt", "desc"),
-          limit(3)
+          where("userId", "in", orgUserIds.slice(0, 10)), // Take first 10 users due to Firestore limitation
+          orderBy("createdAt", "desc")
+          // Removed limit to get all incidents for extracting locations
         )
       );
 
-      const locationIds = incidentsSnap.docs.map(doc => doc.data().incidentDetails?.location).filter(Boolean);
-      const locationMap = {};
-
-      for (const locId of locationIds) {
-        if (!locationMap[locId]) {
-          const locSnap = await getDocs(query(collection(db, "location"), where("__name__", "==", locId)));
-          const locData = locSnap.docs[0]?.data();
-          locationMap[locId] = locData?.name || "Unknown Location";
+      // Extract all unique locations from reports
+      const uniqueLocations = new Set();
+      incidentsSnap.docs.forEach(doc => {
+        const data = doc.data();
+        const location = data.incidentDetails?.location;
+        if (location && typeof location === 'string') {
+          uniqueLocations.add(location);
         }
-      }
+      });
+      
+      // Store all unique locations from the organization
+      const allLocations = Array.from(uniqueLocations);
+      console.log("All organization locations:", allLocations);
+      setAllOrgLocations(allLocations);
+
+      // Create a map of user IDs to user names for display
+      const userMap = {};
+      orgUsersSnap.docs.forEach(doc => {
+        const userData = doc.data();
+        userMap[doc.id] = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Unknown User';
+      });
 
       const timeSince = (createdAt) => {
         if (!createdAt) return "";
@@ -88,16 +120,22 @@ export default function UserDashboard() {
           : `${hours} hr${hours > 1 ? "s" : ""} ago`;
       };
 
-      const formattedIncidents = incidentsSnap.docs.map(doc => {
+      // Only use the first 5 incidents for display
+      const formattedIncidents = incidentsSnap.docs.slice(0, 5).map(doc => {
         const data = doc.data();
         const incidentType = data.incidentType;
-        const locId = data.incidentDetails?.location;
+        const location = data.incidentDetails?.location || "N/A"; // Direct access to location string
+        const reportedBy = userMap[data.userId] || "Unknown User";
+        const isCurrentUser = data.userId === currentUser.uid;
+        
         console.log("Incident Type:", incidentType);
         return {
           id: doc.id,
           type: incidentType,
-          location: locationMap[locId] || "N/A",
+          location: location, // Use the location string directly
           ago: timeSince(data.createdAt?.toDate?.()),
+          reportedBy: reportedBy,
+          isCurrentUser: isCurrentUser
         };
       });
 
@@ -109,6 +147,7 @@ export default function UserDashboard() {
     }
   })();
 }, []);
+
   const formattedDate = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
     day: "numeric",
@@ -193,13 +232,15 @@ export default function UserDashboard() {
   ))}
 </div>
 
+      
+
       <div className="bg-gray-100 rounded-xl shadow-sm p-3 mt-6 mx-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base font-semibold text-gray-800">Recent Incidents</h3>
           <Link to="/reports" className="text-sm text-blue-600 hover:underline">View All</Link>
         </div>
         <div className="space-y-3">
-          {recentIncidents.map(({ id, type, location, ago }) => (
+          {recentIncidents.map(({ id, type, location, ago, reportedBy, isCurrentUser }) => (
             <div
               key={id}
               className="bg-white rounded-xl shadow p-4 flex items-center justify-between"
@@ -215,12 +256,23 @@ export default function UserDashboard() {
                 <div>
                   <p className="font-bold text-black">{type}</p>
                   <p className="text-xs text-gray-500">{location}</p>
+                  
                 </div>
               </div>
               <p className="text-xs text-gray-400">{ago}</p>
             </div>
           ))}
         </div>
+        {isLoading && (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500">Loading incidents...</p>
+          </div>
+        )}
+        {!isLoading && recentIncidents.length === 0 && (
+          <div className="text-center py-4">
+            <p className="text-sm text-gray-500">No recent incidents in your organization</p>
+          </div>
+        )}
       </div>
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">

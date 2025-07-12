@@ -21,11 +21,14 @@ export default function NearMissImpact() {
     const [audioName, setAudioName] = useState("voice.webm");
       const [processing, setProcessing]         = useState(false);
 
+
+
   // ─── Voice‐note state ─────────────────────────
     const [transcriptText, setTranscriptText] = useState("");
      const [description, setDescription] = useState("");
     const [audioUrl, setAudioUrl]             = useState("");
       const [showRecorder, setShowRecorder] = useState(true);
+
 
 
   // animated dots
@@ -50,7 +53,7 @@ export default function NearMissImpact() {
         typeOfConcern: concernType,
         severity,
         responseAction: response,
-        voice: { url: audioUrl, transcript }
+        voice: { url: audioUrl, transcriptText }
       }
     });
     navigate("/near-miss/upload-evidence");

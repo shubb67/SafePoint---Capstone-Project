@@ -13,6 +13,7 @@ export async function POST(request) {
       description,
       transcriptText,
       userId,          // pass from client if needed
+      organizationId,
     } = body;
 
     // Basic validation
@@ -30,6 +31,7 @@ export async function POST(request) {
       description:   description.trim(),
       transcript:    transcriptText || null,
       createdBy:     userId || null,
+      organizationId: organizationId || null,
       createdAt:     admin.firestore.FieldValue.serverTimestamp(),
     });
 

@@ -8,12 +8,22 @@ export default function SubmittedIncidents() {
   useEffect(() => {
     const fetchReports = async () => {
       try {
-        const q = query(collection(db, "reports"), orderBy("createdAt", "desc"), limit(5));
+        const auth = getAuth();
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const orgId = userSnap.data()?.organizationId;
+        if (!orgId) return;
+
+        const q = query(
+          collection(db, "reports"),
+          where("organizationId", "==", orgId),
+          orderBy("createdAt", "desc"),
+          limit(5)
+        );
         const snapshot = await getDocs(q);
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+       const data = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         setIncidents(data);
       } catch (error) {
         console.error("Failed to load submitted incidents", error);

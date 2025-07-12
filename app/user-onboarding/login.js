@@ -38,7 +38,7 @@ export default function Login() {
     const userData = userDoc.data();
 
     if (userData?.role === "admin") {
-      navigate("/admin");
+      navigate("/admin-dashboard");
     } else {
       navigate("/user-dashboard");
     }
