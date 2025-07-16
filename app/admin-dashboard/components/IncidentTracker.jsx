@@ -429,7 +429,7 @@ export default function IncidentDetailView() {
                               <img
                                 src={url}
                                 alt={`Evidence ${index + 1}`}
-                                className="w-full h-48 object-cover rounded-lg border border-gray-200 bg-gray-100"
+                                className="w-full h-48 object-contain rounded-lg border border-gray-200 bg-gray-100"
                                 onError={(e) => {
                                   e.target.style.display = 'none';
                                   e.target.nextSibling.style.display = 'flex';
@@ -441,8 +441,7 @@ export default function IncidentDetailView() {
                                   <p className="text-sm">Image Not Available</p>
                                 </div>
                               </div>
-                              <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all duration-200 rounded-lg"></div>
-                            </div>
+                               </div>
                           );
                         }
                         
