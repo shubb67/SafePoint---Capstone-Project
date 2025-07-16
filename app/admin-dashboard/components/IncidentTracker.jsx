@@ -390,19 +390,27 @@ export default function IncidentDetailView() {
                   </div>
                   
                   {/* Audio Description */}
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Audio Description</label>
-                    <div className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <Play className="w-5 h-5 text-gray-600" />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium text-gray-900">audiorecording.mov</p>
-                        <p className="text-xs text-gray-500">1 min 38 sec</p>
+                  {incidentData?.incidentDetails?.audioUrl && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Audio Description</label>
+                      <div className="p-3 bg-gray-50 rounded-lg">
+                        <audio 
+                          controls 
+                          className="w-full"
+                          preload="metadata"
+                        >
+                          <source src={incidentData.incidentDetails.audioUrl} type="audio/mpeg" />
+                          <source src={incidentData.incidentDetails.audioUrl} type="audio/wav" />
+                          <source src={incidentData.incidentDetails.audioUrl} type="audio/mp4" />
+                          Your browser does not support the audio element.
+                        </audio>
+                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
+                          <Play className="w-3 h-3" />
+                          <span>Audio recording from incident report</span>
+                        </div>
                       </div>
-                      <button className="p-2 hover:bg-gray-200 rounded-lg transition-colors">
-                        <Play className="w-4 h-4 text-gray-600" />
-                      </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               </div>
 
