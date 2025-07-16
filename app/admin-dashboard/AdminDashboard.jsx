@@ -26,6 +26,8 @@ import IncidentsOverTime from './components/IncidentOverTime';
 import ViewAllIncidents from './components/viewAllIncident';
 import { Link } from 'react-router-dom';
 import AdminSidebarLayout from './components/AdminSidebarLayout';
+import { useNavigate } from 'react-router-dom';
+
 
 export default function SafePointDashboard() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -52,11 +54,17 @@ export default function SafePointDashboard() {
     previousRecord: 0
   });
   const [currentView, setCurrentView] = useState('dashboard'); 
+  const navigate = useNavigate();
 
   const handleViewAll = (e) => {
   e.preventDefault(); // Prevent the default anchor behavior
   setCurrentView('viewAll');
 };
+
+// Navigate to incident tracker
+  const handleIncidentClick = (incidentId) => {
+    navigate(`/incident-tracker/${incidentId}`);
+  };
 
   // For safety record calculation
 const allIncidentDates = [];
@@ -285,10 +293,10 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                 <FileText className="w-4 h-4" />
                 <span>Incident Reports</span>
               </Link>
-              <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
+              <Link to="/chat"  className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
                 <MessageSquare className="w-4 h-4" />
                 <span>Chats</span>
-              </a>
+              </Link>
               <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
                 <Layout className="w-4 h-4" />
                 <span>Templates</span>
@@ -366,54 +374,58 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                   </div>
                   
                   {recentIncidents.length > 0 ? (
-                    <div className="space-y-6">
-                      {recentIncidents.map(incident => (
-                        <div key={incident.id} className="grid grid-cols-4 border-t pt-4">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${
-                              incident.type === 'injury' ? '' : 
-                              incident.type === 'safetyHazard' ? 'bg-blue-100' : 
-                              incident.type === 'nearMiss' ? 'bg-yellow-100' : 'bg-orange-100'
-                            }`}>
-                              <img 
-                                src={imgUrl(getIncidentIcon(incident.type))}
-                                alt={incident.type}
-                                className="w-7 h-7 object-fill border rounded-md"
-                              />
+                      <div className="space-y-6">
+                        {recentIncidents.map(incident => (
+                          <div 
+                            key={incident.id} 
+                            className="grid grid-cols-4 border-t pt-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                            onClick={() => handleIncidentClick(incident.id)}
+                          >
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${
+                                incident.type === 'injury' ? '' : 
+                                incident.type === 'safetyHazard' ? 'bg-blue-100' : 
+                                incident.type === 'nearMiss' ? 'bg-yellow-100' : 'bg-orange-100'
+                              }`}>
+                                <img 
+                                  src={imgUrl(getIncidentIcon(incident.type))}
+                                  alt={incident.type}
+                                  className="w-8 h-8 object-fill border rounded-md"
+                                />
+                              </div>
+                              <span className="text-[#1e293b] font-medium">
+                                {incident.type === 'injury' ? 'Injury' : 
+                                 incident.type === 'safetyHazard' ? 'Safety Hazard' : 
+                                 incident.type === 'nearMiss' ? 'Near Miss' : 
+                                 incident.type === 'propertyDamage' ? 'Property Damage' : 
+                                 incident.type.charAt(0).toUpperCase() + incident.type.slice(1).replace(/([A-Z])/g, ' $1').trim()}
+                              </span>
                             </div>
-                            <span className="text-[#1e293b] font-medium">
-                              {incident.type === 'injury' ? 'Injury' : 
-                               incident.type === 'safetyHazard' ? 'Safety Hazard' : 
-                               incident.type === 'nearMiss' ? 'Near Miss' : 
-                               incident.type === 'propertyDamage' ? 'Property Damage' : 
-                               incident.type.charAt(0).toUpperCase() + incident.type.slice(1).replace(/([A-Z])/g, ' $1').trim()}
-                            </span>
+                            <div className="text-gray-400 self-center">{incident.date}</div>
+                            <div className="self-center">
+                              <span className={`font-medium ${
+                                incident.severity === 'high' ? 'text-red-500' : 
+                                incident.severity === 'medium' ? 'text-amber-500' : 'text-green-500'
+                              }`}>
+                                {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
+                              </span>
+                            </div>
+                            <div className="self-center">
+                              <span className={`px-6 py-2 rounded-full inline-block text-sm font-medium ${
+                                incident.status === 'underReview' ? 'bg-amber-100 text-amber-700' : 
+                                incident.status === 'new' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700'
+                              }`}>
+                                {incident.status === 'underReview' ? 'Under Review' : 
+                                 incident.status === 'new' ? 'New Incident' : 'Closed'}
+                              </span>
+                            </div>
                           </div>
-                          <div className="text-gray-400 self-center">{incident.date}</div>
-                          <div className="self-center">
-                            <span className={`font-medium ${
-                              incident.severity === 'high' ? 'text-red-500' : 
-                              incident.severity === 'medium' ? 'text-amber-500' : 'text-green-500'
-                            }`}>
-                              {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
-                            </span>
-                          </div>
-                          <div className="self-center">
-                            <span className={`px-6 py-2 rounded-full inline-block text-sm font-medium ${
-                              incident.status === 'underReview' ? 'bg-amber-100 text-amber-700' : 
-                              incident.status === 'new' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700'
-                            }`}>
-                              {incident.status === 'underReview' ? 'Under Review' : 
-                               incident.status === 'new' ? 'New Incident' : 'Closed'}
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-6 text-center text-gray-500">No incidents found</div>
-                  )}
-                </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-6 text-center text-gray-500">No incidents found</div>
+                    )}
+                  </div>
               )}
             </div>
 

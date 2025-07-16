@@ -285,7 +285,7 @@ export default function UserDashboard() {
             <FileText className="w-6 h-6" />
             <span className="text-xs">Reports</span>
           </Link>
-          <Link to="/chats" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+          <Link to="/chat" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
             <MessageSquare className="w-6 h-6" />
             <span className="text-xs">Chats</span>
           </Link>

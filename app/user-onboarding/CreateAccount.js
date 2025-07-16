@@ -20,7 +20,7 @@ export default function CreateAccount() {
   // ─── Helpers & Handlers ─────────────────────────
   const passwordsMatch = () => password === confirmPassword;
 
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
     setError("");
 
@@ -38,6 +38,20 @@ export default function CreateAccount() {
     }
     if (password.length < 8) {
       setError("Password must be at least 8 characters.");
+      return;
+    }
+    try {
+      const methods = await fetchSignInMethodsForEmail(
+        auth,
+        email.trim().toLowerCase()
+      );
+      if (methods.length) {
+        setError("Email already in use.");
+        return;
+      }
+    } catch (err) {
+      console.error("Email check error:", err);
+      setError("Failed to verify email. Please try again.");
       return;
     }
 
@@ -181,7 +195,7 @@ export default function CreateAccount() {
                 id="countryCode"
                 value={countryCode}
                 onChange={e => setCountryCode(e.target.value)}
-                className="mt-1 block w-full text-gray-400 border border-gray-300 rounded-md p-2
+                className="mt-1 block w-full border border-gray-300 rounded-md p-2
                            focus:border-blue-600 focus:ring focus:ring-blue-200 text-black"
               >
                 <option>+1 (US)</option>

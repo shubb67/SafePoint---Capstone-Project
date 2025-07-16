@@ -58,8 +58,13 @@ export default function UploadPhoto() {
               folderPath,               // <-- use this instead of incidentType/category
             })
           });
-          const { url } = await res.json();
-          resolve(url);
+          if (!res.ok) {
+            const text = await res.text().catch(() => "");
+            throw new Error(text || `Upload failed with status ${res.status}`);
+          }
+          const data = await res.json().catch(() => null);
+          if (!data?.url) throw new Error("Invalid upload response");
+          resolve(data.url);
         } catch (err) {
           reject(err);
         }
@@ -140,7 +145,11 @@ export default function UploadPhoto() {
       navigate("/user-onboarded");
     } catch (err) {
       console.error("Registration error:", err);
-      setError(err.message || "Something went wrong");
+      if (err.code === "auth/email-already-in-use") {
+        setError("Email already in use.");
+      } else {
+        setError(err.message || "Something went wrong");
+      }
     } finally {
       setLoading(false);
     }

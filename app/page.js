@@ -45,7 +45,9 @@ import ForgotPassword from "./user-onboarding/forgot-password";
 import ProfileScreen from "./profile";
 import SafePointDashboard from "./admin-dashboard/AdminDashboard";
 import ViewAllIncidents from "./admin-dashboard/components/viewAllIncident";
-import IncidentTracker from "./admin-dashboard/components/IncidentTracker";
+import IncidentDetailView from "./admin-dashboard/components/IncidentTracker";
+import ChatSystem from "./ChatSystem/chat";
+
 function App() {
   if (typeof window === "undefined") {
     return null;
@@ -96,7 +98,8 @@ function App() {
 
       <Route path="/admin-dashboard" element={<SafePointDashboard />} />
       <Route path="/reports" element={<ViewAllIncidents />} />
-      <Route path="/incident-tracker" element={<IncidentTracker />} />
+      <Route path="/incident-tracker/:incidentId" element={<IncidentDetailView />} />
+      <Route path="/chat" element={<ChatSystem />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />
