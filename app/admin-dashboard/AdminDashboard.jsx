@@ -25,8 +25,8 @@ import IncidentsByLocation from './components/IncidentByLocation';
 import IncidentsOverTime from './components/IncidentOverTime';
 import ViewAllIncidents from './components/viewAllIncident';
 import { Link } from 'react-router-dom';
-import AdminSidebarLayout from './components/AdminSidebarLayout';
 import { useNavigate } from 'react-router-dom';
+import ChatsComponent from './components/ChatsSection';
 
 
 export default function SafePointDashboard() {
@@ -433,38 +433,7 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
             
 
             {/* Chats */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-black">Chats</h2>
-                <a href="#" className="text-blue-600 text-sm">View All</a>
-              </div>
-              <div className="space-y-3">
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">Daniel Smith</h4>
-                    <p className="text-xs text-gray-500">Jun, just a heads up — there's a loose handrail on the second-floor stairwell</p>
-                    <p className="text-xs text-gray-400 mt-1">2hrs ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">John Brown</h4>
-                    <p className="text-xs text-gray-500">The dumpster skips have been making weird noises and the brakes feel soft</p>
-                    <p className="text-xs text-gray-400 mt-1">2hrs ago</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <div className="w-10 h-10 bg-gray-300 rounded-full flex-shrink-0"></div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-sm">Jamie Symons</h4>
-                    <p className="text-xs text-gray-500">There's oil all over the loading dock. I put up a cone, but someone sho...</p>
-                    <p className="text-xs text-gray-400 mt-1">3hrs ago</p>
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ChatsComponent />
 
 
            
