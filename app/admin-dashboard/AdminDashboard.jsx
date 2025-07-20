@@ -434,8 +434,6 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
             {/* Chats */}
             <ChatsComponent />
-
-
            
 
             {/* Incidents by Location */}
