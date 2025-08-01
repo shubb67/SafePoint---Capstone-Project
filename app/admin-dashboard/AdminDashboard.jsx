@@ -11,7 +11,8 @@ import {
   Layout,
   User,
   Calendar,
-  Map
+  Map,
+  X
 } from 'lucide-react';
 import { collection, getDocs, where, query, orderBy, limit } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
@@ -27,6 +28,7 @@ import ViewAllIncidents from './components/viewAllIncident';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import ChatsComponent from './components/ChatsSection';
+import { useRef } from 'react';
 
 
 export default function SafePointDashboard() {
@@ -56,6 +58,99 @@ export default function SafePointDashboard() {
   const [currentView, setCurrentView] = useState('dashboard'); 
   const navigate = useNavigate();
 
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([
+    {
+      id: 1,
+      type: 'incident',
+      title: 'New Incident Report Submitted',
+      description: 'Workplace safety incident reported by John Smith in Manufacturing Floor A',
+      time: '2 minutes ago',
+      isRead: false,
+      actions: ['Review', 'Assign']
+    },
+    {
+      id: 2,
+      type: 'info',
+      title: 'Additional Information Provided',
+      description: 'Report #IR-2025-001 has been updated with requested documentation',
+      time: '3 hours ago',
+      isRead: false,
+      actions: ['Review', 'Details']
+    },
+    {
+      id: 3,
+      type: 'assignment',
+      title: 'Report Assigned to You',
+      description: 'Equipment malfunction report assigned by Sarah Johnson - requires immediate attention',
+      time: '1 day ago',
+      isRead: true,
+      actions: ['Accept', 'Decline']
+    },
+    {
+      id: 4,
+      type: 'update',
+      title: 'Report Status Update',
+      description: 'Report #IR-2025-001 requires additional information',
+      time: '2 days ago',
+      isRead: true,
+      actions: ['View']
+    }
+  ]);
+
+  const notificationRef = useRef(null);
+
+  // Close notification panel when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setShowNotifications(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const unreadCount = notifications.filter(n => !n.isRead).length;
+
+  const markAsRead = (id) => {
+    setNotifications(notifications.map(n => 
+      n.id === id ? { ...n, isRead: true } : n
+    ));
+  };
+
+  const handleAction = (notificationId, action) => {
+    console.log(`Action "${action}" clicked for notification ${notificationId}`);
+    markAsRead(notificationId);
+    // Handle specific actions here
+  };
+
+  const getNotificationIcon = (type) => {
+    switch(type) {
+      case 'incident':
+        return '⚠️';
+      case 'assignment':
+        return '📋';
+      case 'update':
+        return '🔄';
+      default:
+        return 'ℹ️';
+    }
+  };
+
+  const getActionButtonClass = (action) => {
+    switch(action.toLowerCase()) {
+      case 'accept':
+        return 'bg-green-500 hover:bg-green-600 text-white';
+      case 'decline':
+        return 'bg-red-500 hover:bg-red-600 text-white';
+      case 'view':
+        return 'bg-blue-500 hover:bg-blue-600 text-white';
+      default:
+        return 'bg-gray-200 hover:bg-gray-300 text-gray-800';
+    }
+  };
   const handleViewAll = (e) => {
   e.preventDefault(); // Prevent the default anchor behavior
   setCurrentView('viewAll');
@@ -248,7 +343,87 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
         <div className="flex items-center justify-between px-6 py-3">
           <h1 className="text-xl font-semibold">SafePoint</h1>
           <div className="flex items-center gap-4">
-            <Bell className="w-5 h-5 cursor-pointer" />
+            <div className="relative" ref={notificationRef}>
+              <Bell 
+                className="w-5 h-5 cursor-pointer hover:opacity-80 transition-opacity" 
+                onClick={() => setShowNotifications(!showNotifications)}
+              />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+              
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl z-50 max-h-[600px] overflow-hidden">
+                  <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
+                    <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm text-gray-500">{unreadCount} unread</span>
+                      <X 
+                        className="w-4 h-4 text-gray-500 cursor-pointer hover:text-gray-700"
+                        onClick={() => setShowNotifications(false)}
+                      />
+                    </div>
+                  </div>
+                  
+                  <div className="flex gap-2 px-4 py-2 border-b">
+                    <button className="px-3 py-1 text-sm bg-[#1a2b5c] text-white rounded">All</button>
+                    <button className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded">Unread</button>
+                    <button className="px-3 py-1 text-sm text-gray-600 hover:bg-gray-100 rounded">Reports</button>
+                  </div>
+                  
+                  <div className="max-h-[450px] overflow-y-auto">
+                    {notifications.map(notification => (
+                      <div 
+                        key={notification.id}
+                        className={`px-4 py-3 border-b hover:bg-gray-50 transition-colors ${!notification.isRead ? 'bg-blue-50' : ''}`}
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="text-xl mt-1">{getNotificationIcon(notification.type)}</div>
+                          <div className="flex-1">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <h4 className="text-sm font-semibold text-gray-800">
+                                  {notification.title}
+                                </h4>
+                                <p className="text-sm text-gray-600 mt-1">
+                                  {notification.description}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-2">
+                                  {notification.time}
+                                </p>
+                              </div>
+                              {!notification.isRead && (
+                                <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 ml-2"></div>
+                              )}
+                            </div>
+                            <div className="flex gap-2 mt-3">
+                              {notification.actions.map((action, index) => (
+                                <button
+                                  key={index}
+                                  onClick={() => handleAction(notification.id, action)}
+                                  className={`px-3 py-1 text-xs rounded transition-colors ${getActionButtonClass(action)}`}
+                                >
+                                  {action}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="px-4 py-3 bg-gray-50 text-center border-t">
+                    <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+                      View All Notifications
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
             <User className="w-5 h-5 cursor-pointer" />
             <HelpCircle className="w-5 h-5 cursor-pointer" />
             <div className="relative">
@@ -410,15 +585,21 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                                 {incident.severity.charAt(0).toUpperCase() + incident.severity.slice(1)}
                               </span>
                             </div>
-                            <div className="self-center">
-                              <span className={`px-6 py-2 rounded-full inline-block text-sm font-medium ${
-                                incident.status === 'underReview' ? 'bg-amber-100 text-amber-700' : 
-                                incident.status === 'new' ? 'bg-indigo-100 text-indigo-700' : 'bg-green-100 text-green-700'
-                              }`}>
-                                {incident.status === 'underReview' ? 'Under Review' : 
-                                 incident.status === 'new' ? 'New Incident' : 'Closed'}
-                              </span>
-                            </div>
+                           <div className="self-center">
+  <span className={`px-6 py-2 rounded-full inline-block text-sm font-medium ${
+    incident.status === 'new' ? 'bg-indigo-100 text-indigo-700' : 
+    incident.status === 'underReview' ? 'bg-amber-100 text-amber-700' : 
+    incident.status === 'closed' ? 'bg-green-100 text-green-700' : 
+    incident.status === 'rejected' ? 'bg-red-100 text-red-700' : 
+    'bg-gray-100 text-gray-700'
+  }`}>
+    {incident.status === 'new' ? 'New Incident' : 
+     incident.status === 'underReview' ? 'Under Review' : 
+     incident.status === 'closed' ? 'Closed' : 
+     incident.status === 'rejected' ? 'Rejected' : 
+     'Pending'}
+  </span>
+</div>
                           </div>
                         ))}
                       </div>

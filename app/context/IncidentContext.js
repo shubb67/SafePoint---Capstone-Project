@@ -31,6 +31,7 @@ const initialState = {
   },
   evidence: [], // array of File or URL strings
   reportId: "",
+  status: "New Incident", // "New Incident", "In Progress", "Resolved", etc.
 };
 
 function incidentReducer(state, action) {

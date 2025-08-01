@@ -15,9 +15,13 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  ArrowUp
+  ArrowUp,
+  AlertTriangle,
+  Clock,
+  FileQuestion,
+  ChevronDown,
 } from 'lucide-react';
-import { collection, getDocs, where, query, orderBy, limit, doc, getDoc } from "firebase/firestore";
+import { collection, getDocs, where, query, orderBy, limit, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 import { Link } from 'react-router-dom';
@@ -26,6 +30,12 @@ import injuryIcon from "../../assets/image/injury.png";
 import propertyIcon from "../../assets/image/property-damage.png";
 import nearMissIcon from "../../assets/image/danger.png";
 import hazardIcon from "../../assets/image/safety-hazards.png";
+import { useLocation } from 'react-router-dom';
+import { Loader2 } from 'lucide-react';
+
+
+
+
 
 export default function IncidentDetailView() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -42,6 +52,19 @@ export default function IncidentDetailView() {
   const user = auth.currentUser;
   const navigate = useNavigate();
   const { incidentId } = useParams();
+  const [reporterName, setReporterName] = useState(null);
+  const [injuredNames, setInjuredNames] = useState(null);
+  const [witnessNames, setWitnessNames] = useState(null);
+  const [showRequestDetails, setShowRequestDetails] = useState(false);
+const [message, setMessage] = useState('');
+  const [selectedUser, setSelectedUser] = useState('');
+  const [isClosing, setIsClosing] = useState(false);
+  const [closeMessage, setCloseMessage] = useState({ type: '', text: '' });
+  const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+
+
+
 
   // Helper function to get the right icon for each incident type
   const getIncidentIcon = (type) => {
@@ -59,27 +82,130 @@ export default function IncidentDetailView() {
     }
   };
   
-  // Helper to format image URL
-  const imgUrl = img => (img && (img.src || img.default)) || img || "";
-
-  // Helper function to determine if URL is an image
-  const isImageUrl = (url) => {
-    if (!url) return false;
-    const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
-    const urlLower = url.toLowerCase();
-    return imageExtensions.some(ext => urlLower.includes(ext)) || url.includes('image');
+  const handleSendRequest = () => {
+    // Handle send request logic here
+    console.log('Sending request to:', selectedUser);
+    console.log('Message:', message);
+    // Reset form after sending
+    setSelectedUser('');
+    setMessage('');
+    setShowRequestDetails(false);
   };
 
-  // Helper function to determine if URL is a video
-  const isVideoUrl = (url) => {
-    if (!url) return false;
-    const videoExtensions = ['.mp4', '.webm', '.ogg', '.mov', '.avi'];
-    const urlLower = url.toLowerCase();
-    return videoExtensions.some(ext => urlLower.includes(ext)) || url.includes('video');
+  // Handle Under Review status
+  const handleUnderReview = async () => {
+    setIsUpdatingStatus(true);
+    setCloseMessage({ type: '', text: '' });
+
+    try {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      if (!incidentId) {
+        throw new Error('No incident ID provided');
+      }
+
+      // Update incident status to under review
+      const incidentRef = doc(db, 'reports', incidentId);
+      await updateDoc(incidentRef, {
+        status: 'underReview',
+        reviewStartedAt: serverTimestamp(),
+        reviewedBy: currentUser.uid,
+        lastUpdated: serverTimestamp(),
+        reviewInfo: {
+          reviewerName: currentUser.displayName || adminName || 'Admin',
+          reviewerEmail: currentUser.email,
+          reviewStartDate: new Date().toISOString()
+        }
+      });
+
+      setCloseMessage({ 
+        type: 'success', 
+        text: 'Incident status updated to Under Review.' 
+      });
+
+      // Update local state
+      setIncidentData(prev => ({ ...prev, status: 'underReview' }));
+
+    } catch (error) {
+      console.error('Error updating incident status:', error);
+      setCloseMessage({ 
+        type: 'error', 
+        text: `Error: ${error.message}` 
+      });
+    } finally {
+      setIsUpdatingStatus(false);
+    }
   };
 
-  // State for image modal
-  const [selectedImage, setSelectedImage] = useState(null);
+  // Handle Reject Report
+  const handleRejectReport = async () => {
+    const rejectionReason = window.prompt('Please provide a reason for rejecting this report:');
+    
+    if (!rejectionReason || rejectionReason.trim() === '') {
+      alert('Rejection reason is required.');
+      return;
+    }
+
+    if (!window.confirm('Are you sure you want to reject this report? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsRejecting(true);
+    setCloseMessage({ type: '', text: '' });
+
+    try {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      if (!incidentId) {
+        throw new Error('No incident ID provided');
+      }
+
+      // Update incident status to rejected
+      const incidentRef = doc(db, 'reports', incidentId);
+      await updateDoc(incidentRef, {
+        status: 'rejected',
+        rejectedAt: serverTimestamp(),
+        rejectedBy: currentUser.uid,
+        lastUpdated: serverTimestamp(),
+        rejectionInfo: {
+          rejectedByName: currentUser.displayName || adminName || 'Admin',
+          rejectedByEmail: currentUser.email,
+          rejectionReason: rejectionReason,
+          rejectedDate: new Date().toISOString()
+        }
+      });
+
+      setCloseMessage({ 
+        type: 'success', 
+        text: 'Report has been rejected.' 
+      });
+
+      // Update local state
+      setIncidentData(prev => ({ ...prev, status: 'rejected' }));
+
+      // Redirect after 2 seconds
+      setTimeout(() => {
+        navigate('/reports');
+      }, 2000);
+
+    } catch (error) {
+      console.error('Error rejecting report:', error);
+      setCloseMessage({ 
+        type: 'error', 
+        text: `Error: ${error.message}` 
+      });
+    } finally {
+      setIsRejecting(false);
+    }
+  };
 
   // Fetch incident data and evidence
   const fetchIncidentData = async () => {
@@ -111,6 +237,61 @@ export default function IncidentDetailView() {
       setEvidenceLoading(false);
     }
   };
+
+ useEffect(() => {
+    // 1) Reporter
+    const reporterUid = incidentData?.personalInfo?.yourName;
+    if (reporterUid) {
+      getDoc(doc(db, 'users', reporterUid))
+        .then(snap => {
+          if (snap.exists()) {
+            setReporterName(snap.data().firstName);
+          } else {
+            setReporterName('Unknown Reporter');
+          }
+        })
+        .catch(() => setReporterName('Unknown Reporter'));
+    } else {
+      setReporterName(null);
+    }
+
+   
+    // 2) Injured Persons
+    const injured = incidentData?.personalInfo?.injuredPersons;
+     if (injured) {
+      getDoc(doc(db, 'users', injured))
+        .then(snap => {
+          if (snap.exists()) {
+            setInjuredNames(snap.data().firstName);
+          } else {
+            setInjuredNames('Unknown Reporter');
+          }
+        })
+        .catch(() => setInjuredNames('Unknown Reporter'));
+    } else {
+      setInjuredNames(null);
+    }
+    // 3) Witnesses
+    const witnesses = incidentData?.personalInfo?.witnesses;
+    if (witnesses) {
+      getDoc(doc(db, 'users', witnesses))
+        .then(snap => {
+          if (snap.exists()) {
+            setWitnessNames(snap.data().firstName);
+          } else {
+            setWitnessNames('Unknown Reporter');
+          }
+        })
+        .catch(() => setWitnessNames('Unknown Reporter'));
+    } else {
+      setWitnessNames(null);
+    }
+  },[
+    incidentData?.personalInfo?.yourName,
+    incidentData?.personalInfo?.injuredPersons,
+    incidentData?.personalInfo?.witnesses,
+  ]);
+
 
   // Fetch organization data including locations
   useEffect(() => {
@@ -193,14 +374,19 @@ export default function IncidentDetailView() {
     }
   };
 
+  // Helper to convert 24-hour time to 12-hour time format
+
+
   const getStatusBadge = (status) => {
     switch(status) {
       case 'new':
         return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertCircle, text: 'Pending Review' };
       case 'underReview':
-        return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertCircle, text: 'Pending Review' };
+        return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertCircle, text: 'Under Review' };
       case 'closed':
         return { color: 'text-green-600', bg: 'bg-green-100', icon: CheckCircle, text: 'Closed' };
+      case 'rejected':
+        return { color: 'text-red-600', bg: 'bg-red-100', icon: XCircle, text: 'Rejected' };
       default:
         return { color: 'text-orange-600', bg: 'bg-orange-100', icon: AlertCircle, text: 'Pending Review' };
     }
@@ -218,8 +404,78 @@ export default function IncidentDetailView() {
         return 'text-yellow-600 bg-yellow-100';
     }
   };
+   const getStatusBadgeColor = (status) => {
+    switch(incidentData?.status) {
+      case 'rejected':
+        return 'text-red-600 bg-red-100';
+      case 'underReview':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'closed':
+        return 'text-green-600 bg-green-100';
+      default:
+        return 'text-yellow-600 bg-yellow-100';
+    }
+  };
 
   const statusBadge = getStatusBadge(incidentData?.status);
+
+
+  // Handle close incident
+  const handleCloseIncident = async () => {
+    if (!window.confirm('Are you sure you want to close this incident? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsClosing(true);
+    setCloseMessage({ type: '', text: '' });
+
+    try {
+      const currentUser = auth.currentUser;
+
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      if (!incidentId) {
+        throw new Error('No incident ID provided');
+      }
+
+      // Update incident status to closed
+      const incidentRef = doc(db, 'reports', incidentId);
+      await updateDoc(incidentRef, {
+        status: 'closed',
+        closedAt: serverTimestamp(),
+        closedBy: currentUser.uid,
+        lastUpdated: serverTimestamp(),
+        resolution: {
+          closedByName: currentUser.displayName || adminName || 'Admin',
+          closedByEmail: currentUser.email,
+          closureReason: 'Incident resolved',
+          finalNotes: ''
+        }
+      });
+
+      setCloseMessage({ 
+        type: 'success', 
+        text: 'Incident has been closed successfully.' 
+      });
+
+      // Update local state
+      setIncidentData(prev => ({ ...prev, status: 'closed' }));
+
+
+    } catch (error) {
+      console.error('Error closing incident:', error);
+      setCloseMessage({ 
+        type: 'error', 
+        text: `Error: ${error.message}` 
+      });
+    } finally {
+      setIsClosing(false);
+    }
+  };
+
+  // const statusBadge = getStatusBadge(incidentData?.status);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -284,135 +540,210 @@ export default function IncidentDetailView() {
             </nav>
           </div>
         </aside>
+    <div className="min-h-screen bg-gray-50">
+      <div className="max-w-9xl mx-auto px-4 py-6">
+        {/* Breadcrumb */}
+        <div className="flex items-center text-sm text-gray-500 mb-6">
+          <Home className="w-4 h-4 mr-1" />
+          <ChevronRight className="w-4 h-4 mx-1" />
+          <span>Reports</span>
+          <ChevronRight className="w-4 h-4 mx-1" />
+          <span className="text-gray-900">{getIncidentTypeTitle(incidentData?.incidentType)}</span>
+        </div>
 
-        {/* Main Content */}
-        <main className="flex-1 p-6">
-          {/* Breadcrumb */}
-          <div className="flex items-center text-sm text-gray-500 mb-6">
-            <Home className="w-4 h-4 mr-1" />
-            <ChevronRight className="w-4 h-4 mx-1" />
-            <span>Reports</span>
-            <ChevronRight className="w-4 h-4 mx-1" />
-            <span className="text-gray-900">{getIncidentTypeTitle(incidentData?.incidentType)}</span>
-          </div>
-
-          {/* Header Card */}
-          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
-            <div className="flex items-start justify-between">
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-                  <div className="w-6 h-6 bg-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
-                    !
-                  </div>
-                </div>
-                <div>
-                  <h1 className="text-xl font-semibold text-gray-900 mb-1">
+        {/* Header */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="flex-1">
+<h1 className="text-xl font-semibold text-gray-900 mb-1">
                     {incidentData?.incidentType === 'injury' ? 'Injury Report' : 
                      incidentData?.incidentType === 'safetyHazard' ? 'Safety Hazard Report' : 
                      incidentData?.incidentType === 'nearMiss' ? 'Near Miss Report' : 
                      incidentData?.incidentType === 'propertyDamage' ? 'Property Damage Report' : 
                      'Incident Report'}
                   </h1>
-                  <p className="text-sm text-gray-500">
-                    Report ID: #{incidentId || 'INC-2025-001'}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-4">
-                <span className="text-sm text-gray-500">
-                  Submitted {incidentData?.createdAt?.toDate?.()?.toLocaleDateString() || '2 hours ago'}
-                </span>
-                <span className={`inline-flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${statusBadge.bg} ${statusBadge.color}`}>
-                  <statusBadge.icon className="w-4 h-4" />
-                  {statusBadge.text}
-                </span>
-              </div>
+              <p className="text-sm text-gray-500 mt-1">
+                Report ID: #{incidentId || 'INC-2025-001'}
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-gray-500">
+                Submitted {incidentData?.createdAt?.toDate?.()?.toLocaleString() || '2 hours ago'}
+              </span>
+              <span className={`inline-flex items-center gap-2 px-5 py-1 ${getStatusBadgeColor(
+              incidentData?.status || 'medium'
+            )} rounded-full text-sm font-medium`}>
+                {statusBadge.icon && <statusBadge.icon className="w-4 h-4" />}
+                {incidentData?.status.charAt(0).toUpperCase() + incidentData?.status.slice(1) || 'Pending Review'}
+              </span>
             </div>
           </div>
-
+        </div>
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             {/* Left Column - Main Content */}
             <div className="lg:col-span-2 space-y-6">
-              {/* Personal Information */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Personal Information</h2>
-                  <div className="grid grid-cols-2 gap-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Reporter Name</label>
-                      <p className="text-sm text-gray-900">{incidentData?.reporterInfo?.name || 'Sarah Johnson'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Injured Person(s)</label>
-                      <p className="text-sm text-gray-900">{incidentData?.reporterInfo?.injuredPersons || 'Michael Rodriguez, Construction Worker'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Time Lost Injury?</label>
-                      <p className="text-sm text-red-600 font-medium">{incidentData?.reporterInfo?.timeLostInjury || 'Yes'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Witness/es</label>
-                      <p className="text-sm text-gray-900">{incidentData?.reporterInfo?.witnesses || 'Emma Thompson, David Chen'}</p>
-                    </div>
-                  </div>
-                </div>
-              </div>
+             {/* Personal Information */}
 
-              {/* Incident Details */}
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-                <div className="p-6">
-                  <h2 className="text-lg font-semibold text-gray-900 mb-4">Incident Details</h2>
-                  <div className="grid grid-cols-3 gap-6 mb-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
-                      <p className="text-sm text-gray-900">{incidentData?.incidentDetails?.date || 'March 15, 2024'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
-                      <p className="text-sm text-gray-900">{incidentData?.incidentDetails?.time || '2:30 PM'}</p>
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Severity</label>
-                      <span className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${getSeverityColor(incidentData?.impactInfo?.severity || 'medium')}`}>
-                        {incidentData?.impactInfo?.severity ? incidentData.impactInfo.severity.charAt(0).toUpperCase() + incidentData.impactInfo.severity.slice(1) : 'Medium'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
-                    <p className="text-sm text-gray-900">{incidentData?.incidentDetails?.location || 'Construction Site - Building A, Level 3'}</p>
-                  </div>
-                  <div className="mb-6">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                    <p className="text-sm text-gray-900 leading-relaxed">
-                      {incidentData?.incidentDetails?.description || 'Worker fell from scaffolding while installing safety barriers. The scaffolding appeared to be improperly secured. Emergency services were called immediately. Worker sustained injuries to leg and back.'}
-                    </p>
-                  </div>
-                  
-                  {/* Audio Description */}
-                  {incidentData?.incidentDetails?.audioUrl && (
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Audio Description</label>
-                      <div className="p-3 bg-gray-50 rounded-lg">
-                        <audio 
-                          controls 
-                          className="w-full"
-                          preload="metadata"
-                        >
-                          <source src={incidentData.incidentDetails.audioUrl} type="audio/mpeg" />
-                          <source src={incidentData.incidentDetails.audioUrl} type="audio/wav" />
-                          <source src={incidentData.incidentDetails.audioUrl} type="audio/mp4" />
-                          Your browser does not support the audio element.
-                        </audio>
-                        <div className="mt-2 flex items-center gap-2 text-xs text-gray-500">
-                          <Play className="w-3 h-3" />
-                          <span>Audio recording from incident report</span>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+<div className="bg-white rounded-lg shadow-sm border border-gray-200">
+  <div className="p-6">
+    {/* Title */}
+    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      Personal Information
+    </h2>
+
+    {/* Four‐column row with vertical dividers */}
+    <div className="grid grid-cols-4 divide-x divide-gray-200">
+      {/* Reporter Name */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Reporter Name
+        </p>
+        <p className="text-sm text-gray-900">
+          {reporterName != null
+                ? reporterName
+                : incidentData?.personalInfo?.yourName || 'Sarah Johnson'}
+        </p>
+      </div>
+
+      {/* Injured Person(s) */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Injured Person(s)
+        </p>
+        <p className="text-sm text-gray-900">
+         {injuredNames != null 
+                ? injuredNames
+                : incidentData?.personalInfo?.injuredPersons ||
+                  'Michael Rodriguez, Construction Worker'}
+        </p>
+      </div>
+
+      {/* Time Lost Injury? */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Time Lost Injury?
+        </p>
+        <p className="text-sm font-medium text-red-600">
+          {incidentData?.personalInfo?.wasInjured || 'Yes'}
+        </p>
+      </div>
+
+      {/* Witness/es */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Witness/es
+        </p>
+        <p className="text-sm text-gray-900">
+           {witnessNames != null
+                ? witnessNames
+                : incidentData?.personalInfo?.witnesses ||
+                  'Emma Thompson, David Chen'}
+        </p>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+             {/* Incident Details */}
+<div className="bg-white rounded-lg shadow-sm border border-gray-200">
+  <div className="p-6">
+    {/* Title */}
+    <h2 className="text-lg font-semibold text-gray-900 mb-4">
+      Incident Details
+    </h2>
+
+    {/* Top row: Date / Time / Location / Severity */}
+    <div className="grid grid-cols-4 gap-6 mb-6">
+      {/* Date */}
+      <div>
+        <p className="text-sm font-medium text-gray-700">Date</p>
+        <p className="mt-1 text-sm text-gray-900">
+          {incidentData?.incidentDetails?.date || 'March 15, 2024'}
+        </p>
+      </div>
+
+      {/* Time */}
+      <div>
+        <p className="text-sm font-medium text-gray-700">Time</p>
+        <p className="mt-1 text-sm text-gray-900">
+          {incidentData?.incidentDetails?.time.toDate?.()?.toLocaleString() || '2:30 PM'}
+        </p>
+      </div>
+
+      {/* Location */}
+      <div>
+        <p className="text-sm font-medium text-gray-700">Location</p>
+        <p className="mt-1 text-sm text-gray-900">
+          {incidentData?.incidentDetails?.location ||
+            'Construction Site – Building A, Level 3'}
+        </p>
+      </div>
+
+      {/* Severity */}
+      <div>
+        <p className="text-sm font-medium text-gray-700">Severity</p>
+        <span
+          className={`
+            inline-flex items-center
+            px-2 py-1 rounded-full text-xs font-medium
+            ${getSeverityColor(
+              incidentData?.impactInfo?.severity || 'medium'
+            )}
+          `}
+        >
+          {incidentData?.impactInfo?.severity
+            ? incidentData.impactInfo.severity[0].toUpperCase() +
+              incidentData.impactInfo.severity.slice(1)
+            : 'Medium'}
+        </span>
+      </div>
+    </div>
+
+    {/* AI Summary Description */}
+    <div className="mb-6">
+      <p className="text-sm font-medium text-gray-700">
+        AI Summary Description
+      </p>
+      <p className="mt-1 text-sm text-gray-900 leading-relaxed">
+        {incidentData?.incidentDetails?.description ||
+          'Worker fell from scaffolding while installing safety barriers. The scaffolding appeared to be improperly secured. Emergency services were called immediately. Worker sustained injuries to leg and back.'}
+      </p>
+      <a
+        href="#"
+        className="mt-2 inline-block text-sm font-medium text-blue-600 hover:underline"
+      >
+        View Full Description
+      </a>
+    </div>
+
+    {/* Audio Description */}
+    {incidentData?.incidentDetails?.audioUrl && (
+      <div>
+        <p className="text-sm font-medium text-gray-700 mb-2">
+          Audio Description
+        </p>
+        <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
+          <Play className="w-5 h-5 text-gray-500" />
+          <span className="text-sm text-gray-900">
+            {/* display the filename */}
+            {incidentData.incidentDetails.audioUrl.split('/').pop()}
+          </span>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          {/* you could compute or pass this in props */}
+          1 min 38 sec
+        </p>
+      </div>
+    )}
+  </div>
+</div>
+
 
               {/* Evidence */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200">
@@ -427,7 +758,7 @@ export default function IncidentDetailView() {
                       <div className="text-gray-500">No evidence available</div>
                     </div>
                   ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                       {evidence.slice(0, 4).map((evidenceItem, index) => {
                         const { type, url } = evidenceItem;
                         
@@ -482,46 +813,146 @@ export default function IncidentDetailView() {
             </div>
 
             {/* Right Column - Actions */}
-            <div className="space-y-6">
-              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Review Actions</h2>
-                <div className="space-y-3">
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors">
-                    <CheckCircle className="w-5 h-5" />
-                    Close Incident
-                  </button>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors">
-                    <XCircle className="w-5 h-5" />
-                    Reject Report
-                  </button>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors">
-                    <ArrowUp className="w-5 h-5" />
-                    Escalate Incident
-                  </button>
-                  <button className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                    <AlertCircle className="w-5 h-5" />
-                    Request Details
-                  </button>
-                </div>
+          <div className="space-y-6">
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">Review Actions</h2>
+        <div className="space-y-3">
+           <button 
+                      onClick={handleCloseIncident}
+                      disabled={isClosing || incidentData?.status === 'closed'}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#BDEECF] text-[#22C560] rounded-lg hover:bg-green-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isClosing ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Processing...
+                        </>
+                      ) : incidentData?.status === 'closed' ? (
+                        <>
+                          <CheckCircle className="w-5 h-5" />
+                          Incident Closed
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle className="w-5 h-5" />
+                          Close Incident
+                        </>
+                      )}
+                    </button>
+          
+<button 
+                      onClick={handleUnderReview}
+                      disabled={isUpdatingStatus || incidentData?.status === 'underReview' || incidentData?.status === 'closed' || incidentData?.status === 'rejected'}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FCE2B6] text-[#F69D0D] rounded-lg hover:bg-orange-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isUpdatingStatus ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Processing...
+                        </>
+                      ) : incidentData?.status === 'underReview' ? (
+                        <>
+                          <AlertCircle className="w-5 h-5" />
+                          Already Under Review
+                        </>
+                      ) : (
+                        <>
+                          <AlertCircle className="w-5 h-5" />
+                          Under Review
+                        </>
+                      )}
+                    </button>
+                    
+                    <button 
+                      onClick={handleRejectReport}
+                      disabled={isRejecting || incidentData?.status === 'rejected' || incidentData?.status === 'closed'}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#FFA7A5] text-[#EE433F] rounded-lg hover:bg-red-400 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {isRejecting ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          Processing...
+                        </>
+                      ) : incidentData?.status === 'rejected' ? (
+                        <>
+                          <XCircle className="w-5 h-5" />
+                          Report Rejected
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="w-5 h-5" />
+                          Reject Report
+                        </>
+                      )}
+                    </button>
+          <button 
+            onClick={() => setShowRequestDetails(!showRequestDetails)}
+            className={`w-full flex items-center justify-center gap-2 px-4 py-3 bg-[#D0D1FB]  rounded-lg hover:bg-blue-400 hover:text-white transition-colors ${
+              showRequestDetails 
+                ? 'bg-indigo-100 text-indigo-700' 
+                : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100'
+            }`}
+          >
+            <FileQuestion className="w-5 h-5" />
+            Request Details
+            <ChevronDown className={`w-4 h-4 transition-transform ${showRequestDetails ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
 
-                <div className="mt-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Assign to Another Admin
-                  </label>
-                  <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                    <option>Select Admin</option>
-                    <option>Daniel Smith</option>
-                    <option>Emily Johnson</option>
+        {/* Request Details Dropdown */}
+        {showRequestDetails && (
+          <div className="mt-4 pt-4 border-t border-gray-200 animate-in slide-in-from-top-2">
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Request Details From:
+                </label>
+                <div className="relative">
+                  <select
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none cursor-pointer"
+                  >
+                    <option value="">Select User</option>
+                    <option value="user1">John Doe</option>
+                    <option value="user2">Jane Smith</option>
+                    <option value="user3">Mike Johnson</option>
+                    <option value="user4">Sarah Williams</option>
                   </select>
-                  <button className="mt-3 w-full px-4 py-2 bg-gray-900 text-white rounded-lg hover:bg-gray-800 transition-colors">
-                    Assign Report
-                  </button>
+                  <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Message
+                </label>
+                <textarea
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  placeholder="Please type request here..."
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  rows={4}
+                />
+              </div>
+
+              <button
+                onClick={handleSendRequest}
+                disabled={!selectedUser || !message.trim()}
+                className="w-full py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+              >
+                Send Request
+              </button>
             </div>
           </div>
-        </main>
+        )}
       </div>
+    </div>
+          </div>
+        </div>
+      </div>
+      </div>
+    
     </div>
   );
 }

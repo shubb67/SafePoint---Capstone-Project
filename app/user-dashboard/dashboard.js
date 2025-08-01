@@ -1,10 +1,8 @@
-// Updated UserDashboard.jsx - Shows incidents from all users in the same organization
-
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   Bell,
-  Home as HomeIcon,
+  Home,
   FileText,
   MessageSquare,
   User
@@ -18,8 +16,7 @@ import injuryIcon   from "../assets/image/injury.png";
 import propertyIcon from "../assets/image/property-damage.png";
 import nearMissIcon from "../assets/image/danger.png";
 import hazardIcon   from "../assets/image/safety-hazards.png";
-
-
+import { calculateSafetyRecord } from '@/_utils/safetyRecordUtils';
 
 export default function UserDashboard() {
   const navigate = useNavigate();
@@ -31,7 +28,11 @@ export default function UserDashboard() {
   const [prevRecordDays, setPrevRecordDays] = useState(0);
   const [recentIncidents, setRecentIncidents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [allOrgLocations, setAllOrgLocations] = useState([]); // New state to store all unique locations
+  const [allOrgLocations, setAllOrgLocations] = useState([]);
+  const [safetyRecord, setSafetyRecord] = useState({
+    currentStreak: 0,
+    previousRecord: 0
+  });
 
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
@@ -43,110 +44,122 @@ export default function UserDashboard() {
   };
 
   console.log("Incident Type Icons:", incidentTypeIcons);
-
+  
   useEffect(() => {
-    (async () => {
-    try {
-      const auth = getAuth();
-      const currentUser = auth.currentUser;
-      if (!currentUser) return;
-
-      // Get current user's data first
-      const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
-      const user = userSnap.docs[0]?.data();
-      const userCompany = user?.company;
-      
-      setUserName(user?.firstName || "User");
-      setProjectName(userCompany || "Unknown Project");
-      setProjectSite(user?.siteLocation || "Unknown Site");
-
-      if (!userCompany) {
-        console.warn("User company not found, cannot fetch organization incidents");
-        setIsLoading(false);
-        return;
-      }
-
-      // Get all users from the same company/organization
-      const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", userCompany)));
-      const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
-
-      if (orgUserIds.length === 0) {
-        setIsLoading(false);
-        return;
-      }
-
-      // Fetch incidents from all users in the organization
-      // Note: Firestore has a limit of 10 items for 'in' queries, so if you have more than 10 users,
-      // you'll need to batch the queries or restructure your data
-      const incidentsSnap = await getDocs(
-        query(
-          collection(db, "reports"),
-          where("userId", "in", orgUserIds.slice(0, 10)), // Take first 10 users due to Firestore limitation
-          orderBy("createdAt", "desc")
-          // Removed limit to get all incidents for extracting locations
-        )
-      );
-
-      // Extract all unique locations from reports
-      const uniqueLocations = new Set();
-      incidentsSnap.docs.forEach(doc => {
-        const data = doc.data();
-        const location = data.incidentDetails?.location;
-        if (location && typeof location === 'string') {
-          uniqueLocations.add(location);
+    const fetchDashboardData = async () => {
+      try {
+        setIsLoading(true);
+        const auth = getAuth();
+        const currentUser = auth.currentUser;
+        if (!currentUser) {
+          setIsLoading(false);
+          return;
         }
-      });
-      
-      // Store all unique locations from the organization
-      const allLocations = Array.from(uniqueLocations);
-      console.log("All organization locations:", allLocations);
-      setAllOrgLocations(allLocations);
 
-      // Create a map of user IDs to user names for display
-      const userMap = {};
-      orgUsersSnap.docs.forEach(doc => {
-        const userData = doc.data();
-        userMap[doc.id] = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Unknown User';
-      });
-
-      const timeSince = (createdAt) => {
-        if (!createdAt) return "";
-        const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
-        const seconds = Math.floor((new Date() - date) / 1000);
-        const hours = Math.floor(seconds / 3600);
-        const days = Math.floor(seconds / 86400);
-        return days > 0
-          ? `${days} day${days > 1 ? "s" : ""} ago`
-          : `${hours} hr${hours > 1 ? "s" : ""} ago`;
-      };
-
-      // Only use the first 5 incidents for display
-      const formattedIncidents = incidentsSnap.docs.slice(0, 5).map(doc => {
-        const data = doc.data();
-        const incidentType = data.incidentType;
-        const location = data.incidentDetails?.location || "N/A"; // Direct access to location string
-        const reportedBy = userMap[data.userId] || "Unknown User";
-        const isCurrentUser = data.userId === currentUser.uid;
+        // Get current user's data first
+        const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
+        const user = userSnap.docs[0]?.data();
+        const userCompany = user?.company;
         
-        console.log("Incident Type:", incidentType);
-        return {
-          id: doc.id,
-          type: incidentType,
-          location: location, // Use the location string directly
-          ago: timeSince(data.createdAt?.toDate?.()),
-          reportedBy: reportedBy,
-          isCurrentUser: isCurrentUser
-        };
-      });
+        setUserName(user?.firstName || "User");
+        setProjectName(userCompany || "Unknown Project");
+        setProjectSite(user?.siteLocation || "Unknown Site");
 
-      setRecentIncidents(formattedIncidents);
-    } catch (err) {
-      console.error("Dashboard data error:", err);
-    } finally {
-      setIsLoading(false); // Spinner stop
-    }
-  })();
-}, []);
+        if (!userCompany) {
+          console.warn("User company not found, cannot fetch organization incidents");
+          setIsLoading(false);
+          return;
+        }
+
+        // Get all users from the same company/organization
+        const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", userCompany)));
+        const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
+
+        if (orgUserIds.length === 0) {
+          setIsLoading(false);
+          return;
+        }
+
+        // Fetch incidents from all users in the organization
+        const incidentsSnap = await getDocs(
+          query(
+            collection(db, "reports"),
+            where("userId", "in", orgUserIds.slice(0, 10)),
+            orderBy("createdAt", "desc")
+          )
+        );
+
+        // Extract all unique locations from reports
+        const uniqueLocations = new Set();
+        const allIncidentDates = [];
+        
+        incidentsSnap.docs.forEach(doc => {
+          const data = doc.data();
+          const location = data.incidentDetails?.location;
+          if (location && typeof location === 'string') {
+            uniqueLocations.add(location);
+          }
+          // Collect incident dates for safety record calculation
+          const incidentDate = data.createdAt?.toDate?.() || new Date();
+          allIncidentDates.push(incidentDate);
+        });
+        
+        // Store all unique locations from the organization
+        const allLocations = Array.from(uniqueLocations);
+        console.log("All organization locations:", allLocations);
+        setAllOrgLocations(allLocations);
+
+        // Calculate safety record with all incident dates
+        const safetyRecordData = calculateSafetyRecord(allIncidentDates);
+        setSafetyRecord(safetyRecordData);
+
+        // Create a map of user IDs to user names for display
+        const userMap = {};
+        orgUsersSnap.docs.forEach(doc => {
+          const userData = doc.data();
+          userMap[doc.id] = `${userData.firstName || ''} ${userData.lastName || ''}`.trim() || 'Unknown User';
+        });
+
+        const timeSince = (createdAt) => {
+          if (!createdAt) return "";
+          const date = createdAt.toDate ? createdAt.toDate() : new Date(createdAt);
+          const seconds = Math.floor((new Date() - date) / 1000);
+          const hours = Math.floor(seconds / 3600);
+          const days = Math.floor(seconds / 86400);
+          return days > 0
+            ? `${days} day${days > 1 ? "s" : ""} ago`
+            : `${hours} hr${hours > 1 ? "s" : ""} ago`;
+        };
+
+        // Only use the first 5 incidents for display
+        const formattedIncidents = incidentsSnap.docs.slice(0, 5).map(doc => {
+          const data = doc.data();
+          const incidentType = data.incidentType;
+          const location = data.incidentDetails?.location || "N/A";
+          const reportedBy = userMap[data.userId] || "Unknown User";
+          const isCurrentUser = data.userId === currentUser.uid;
+          
+          console.log("Incident Type:", incidentType);
+          return {
+            id: doc.id,
+            type: incidentType,
+            location: location,
+            ago: timeSince(data.createdAt?.toDate?.()),
+            reportedBy: reportedBy,
+            isCurrentUser: isCurrentUser
+          };
+        });
+
+        setRecentIncidents(formattedIncidents);
+      } catch (err) {
+        console.error("Dashboard data error:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDashboardData();
+  }, []);
 
   const formattedDate = new Date().toLocaleDateString("en-GB", {
     weekday: "long",
@@ -162,8 +175,8 @@ export default function UserDashboard() {
         <Image
           src={NewIncidentIcon}
           alt="New Incident"
-          width={32}
-          height={32}
+          width={118}
+          height={118}
           className="object-contain"
         />
       ),
@@ -171,7 +184,7 @@ export default function UserDashboard() {
     },
     {
       title: "View Your Reports",
-      icon: <FileText className="w-8 h-8 text-gray-800" />,
+      icon: <FileText className="w-28 h-28 text-gray-800" />,
       onClick: () => navigate("/reports"),
     },
   ];
@@ -202,37 +215,34 @@ export default function UserDashboard() {
             <div className="text-right">
               <p className="text-xs text-black">Safety Record</p>
             </div>
-            
           </div>
           <div className="flex gap-4">
-            <div className="flex-1 bg-[#192C63] text-white rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold">{incidentFreeDays}</p>
+            <div className="flex-1 bg-purple-300 text-[#374151] rounded-lg p-4 text-center">
+              <p className="text-3xl font-bold">{safetyRecord.currentStreak}</p>
               <p className="text-xs">Incident-Free</p>
             </div>
-            <div className="flex-1 bg-green-400 text-black rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold">{prevRecordDays}</p>
+            <div className="flex-1 bg-green-200 text-black rounded-lg p-4 text-center">
+              <p className="text-3xl font-bold">{safetyRecord.previousRecord}</p>
               <p className="text-xs">Previous Record</p>
             </div>
           </div>
         </div>
       </div>
 
-   <div className="mt-6 px-4 grid grid-cols-2 gap-4">
-  {cards.map(({ title, icon, onClick }) => (
-    <button
-      key={title}
-      onClick={onClick}
-      className="flex flex-col justify-center items-center gap-[14px] p-8 rounded-[8px] bg-[rgba(229,231,235,0.5)] shadow-md transition hover:shadow-lg w-full h-full"
-    >
-      {icon}
-      <span className="text-base font-medium text-black text-center">
-        {title}
-      </span>
-    </button>
-  ))}
-</div>
-
-      
+      <div className="mt-6 px-4 grid grid-cols-2 gap-4">
+        {cards.map(({ title, icon, onClick }) => (
+          <button
+            key={title}
+            onClick={onClick}
+            className="flex flex-col justify-center text-gray-800 items-left gap-[14px] p-4 pb-8 rounded-[8px] bg-white shadow-md transition hover:shadow-lg w-full h-full"
+          >
+            {icon}
+            <span className="text-lg font-medium text-black text-left">
+              {title}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <div className="bg-gray-100 rounded-xl shadow-sm p-3 mt-6 mx-2">
         <div className="flex items-center justify-between mb-2">
@@ -254,9 +264,8 @@ export default function UserDashboard() {
                   />
                 </div>
                 <div>
-                  <p className="font-bold text-black">{type}</p>
+                  <p className="font-bold text-black">{type.charAt(0).toUpperCase() + type.slice(1)}</p>
                   <p className="text-xs text-gray-500">{location}</p>
-                  
                 </div>
               </div>
               <p className="text-xs text-gray-400">{ago}</p>
@@ -278,7 +287,7 @@ export default function UserDashboard() {
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
           <Link to="/" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <HomeIcon className="w-6 h-6" />
+            <Home className="w-6 h-6" />
             <span className="text-xs">Home</span>
           </Link>
           <Link to="/reports" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
