@@ -136,8 +136,11 @@ const ChatSystem = () => {
           <div className="flex items-center justify-between">
             <h1 className="text-2xl font-semibold text-gray-900">Chats</h1>
             <span className="text-blue-600 text-sm cursor-pointer">View All</span>
+            
           </div>
+          
         </div>
+      <hr className="border-gray-200 mb-4 w-auto" />
 
         {/* Chat List */}
         <div className="divide-y divide-gray-100">

@@ -412,10 +412,6 @@ const ChatSystem = () => {
                     <MessageSquare className="w-4 h-4" />
                     <span>Chats</span>
                   </a>
-                  <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                    <Layout className="w-4 h-4" />
-                    <span>Templates</span>
-                  </a>
                 </nav>
               </div>
             </aside>

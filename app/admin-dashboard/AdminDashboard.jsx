@@ -472,11 +472,6 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                 <MessageSquare className="w-4 h-4" />
                 <span>Chats</span>
               </Link>
-              <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                <Layout className="w-4 h-4" />
-                <span>Templates</span>
-              </a>
-            
             </nav>
             
             
@@ -492,16 +487,16 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
               <h2 className="text-lg font-semibold mb-4 text-black">Incident Tracker</h2>
               <div className="flex gap-3">
                 <div className="flex-1 bg-purple-300 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-[#374151]">{recentStats.last7Days}</div>
+                  <div className="text-4xl font-bold text-[#374151]">{recentStats.last7Days}</div>
                   <div className="text-sm text-[#374151]">New Incidents</div>
                 </div>
                 <div className="flex-1 bg-orange-200 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-orange-900">1</div>
-                  <div className="text-sm text-orange-700">Under Review</div>
+                  <div className="text-4xl font-bold text-[#374151]">1</div>
+                  <div className="text-sm text-[#374151]">Under Review</div>
                 </div>
                 <div className="flex-1 bg-green-200 rounded-lg p-4 text-center">
-                  <div className="text-3xl font-bold text-green-900">4</div>
-                  <div className="text-sm text-green-700">Closed Incidents</div>
+                  <div className="text-4xl font-bold text-[#374151]">4</div>
+                  <div className="text-sm text-[#374151]">Closed Incidents</div>
                 </div>
               </div>
             </div>
@@ -610,13 +605,9 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
               )}
             </div>
 
-
-            
-
             {/* Chats */}
             <ChatsComponent />
            
-
             {/* Incidents by Location */}
               <IncidentsByLocation/>
 

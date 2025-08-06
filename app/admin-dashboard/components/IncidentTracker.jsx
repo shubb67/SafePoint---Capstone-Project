@@ -32,6 +32,9 @@ import nearMissIcon from "../../assets/image/danger.png";
 import hazardIcon from "../../assets/image/safety-hazards.png";
 import { useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import NotifyAllEmployees from './NotifyEmployees';
+import { Listbox } from '@headlessui/react'
+
 
 
 
@@ -63,6 +66,9 @@ const [message, setMessage] = useState('');
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
 
+  const [notifyMessage, setNotifyMessage] = useState('');
+  const [requestUserOptions, setRequestUserOptions] = useState([]);
+
 
 
 
@@ -81,7 +87,11 @@ const [message, setMessage] = useState('');
         return hazardIcon;
     }
   };
-  
+
+  const handleSendNotification = () => {
+    console.log('Sending notification to all employees:', notifyMessage);
+    // Add your notification logic here
+  };
   const handleSendRequest = () => {
     // Handle send request logic here
     console.log('Sending request to:', selectedUser);
@@ -91,6 +101,38 @@ const [message, setMessage] = useState('');
     setMessage('');
     setShowRequestDetails(false);
   };
+
+function asUidArray(val) {
+  if (!val) return [];
+  // If already an array, flatten to UIDs
+  if (Array.isArray(val)) {
+    return val
+      .map(item => {
+        if (!item) return null;
+        if (typeof item === "string") return item;
+        if (typeof item === "object") {
+          if (item.uid) return item.uid;
+          if (item.id) return item.id;
+          // If it's a Firestore DocumentReference
+          if (item.path) return item.id || item.path.split('/').pop();
+        }
+        return null;
+      })
+      .filter(Boolean);
+  }
+  // If string and looks like comma separated
+  if (typeof val === "string" && val.includes(',')) return val.split(',').map(s => s.trim()).filter(Boolean);
+  // If object (single), try extract UID
+  if (typeof val === "object") {
+    if (val.uid) return [val.uid];
+    if (val.id) return [val.id];
+    if (val.path) return [val.id || val.path.split('/').pop()];
+    return [];
+  }
+  // Otherwise, treat as string UID
+  return [val];
+}
+
 
   // Handle Under Review status
   const handleUnderReview = async () => {
@@ -291,6 +333,46 @@ const [message, setMessage] = useState('');
     incidentData?.personalInfo?.injuredPersons,
     incidentData?.personalInfo?.witnesses,
   ]);
+
+  useEffect(() => {
+  async function fetchRequestUsers() {
+    if (!companyName || companyName === "..." || !incidentData) return;
+
+    // Step 1: Build involved user IDs list
+const involvedUserIds = [
+  ...asUidArray(incidentData?.personalInfo?.yourName),
+  ...asUidArray(incidentData?.personalInfo?.injuredPersons),
+  ...asUidArray(incidentData?.personalInfo?.witnesses)
+].filter(Boolean);
+
+    const uniqueInvolvedUserIds = [...new Set(involvedUserIds)].filter(Boolean);
+    if (!uniqueInvolvedUserIds.length) {
+      setRequestUserOptions([]);
+      return;
+    }
+
+    // Step 2: Fetch those users in company
+    // We fetch by UID (Firestore doc ID), then filter by company
+    const userPromises = uniqueInvolvedUserIds.map(uid =>
+      getDoc(doc(db, "users", uid))
+    );
+    const userSnaps = await Promise.all(userPromises);
+    const users = userSnaps
+      .filter(snap => snap.exists() && snap.data().company === companyName)
+      .map(snap => {
+        const d = snap.data();
+        return {
+          uid: snap.id,
+          firstName: d.firstName || '',
+          lastName: d.surname || '',
+          photoUrl: d.photoUrl || '',
+          email: d.email || '',
+        };
+      });
+    setRequestUserOptions(users);
+  }
+  fetchRequestUsers();
+}, [companyName, incidentData]);
 
 
   // Fetch organization data including locations
@@ -908,17 +990,60 @@ const [message, setMessage] = useState('');
                   Request Details From:
                 </label>
                 <div className="relative">
-                  <select
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                    className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent appearance-none cursor-pointer"
-                  >
-                    <option value="">Select User</option>
-                    <option value="user1">John Doe</option>
-                    <option value="user2">Jane Smith</option>
-                    <option value="user3">Mike Johnson</option>
-                    <option value="user4">Sarah Williams</option>
-                  </select>
+               <Listbox value={selectedUser} onChange={setSelectedUser}>
+  <div className="relative">
+    <Listbox.Button className="relative w-full cursor-pointer rounded-lg bg-white border border-gray-300 py-2 pl-3 pr-10 text-left shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
+      <span className="flex items-center">
+        {selectedUser ? (
+          (() => {
+            const u = requestUserOptions.find(x => x.uid === selectedUser);
+            return u ? (
+              <>
+                {u.photoUrl
+                  ? <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
+                  : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
+                }
+                <span className="block truncate text-black">{u.firstName} {u.lastName}</span>
+              </>
+            ) : <span className="text-gray-400">Select User</span>;
+          })()
+        ) : (
+          <span className="text-gray-400">Select User</span>
+        )}
+      </span>
+      <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+        <ChevronDown className="h-5 w-5 text-gray-400" />
+      </span>
+    </Listbox.Button>
+    <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto  bg-white py-1 shadow-lg ring-1  ring-opacity-5 focus:outline-none">
+      {requestUserOptions.map((u) => (
+        <Listbox.Option
+          key={u.uid}
+          value={u.uid}
+          className={({ active }) =>
+            `relative cursor-pointer select-none py-2 pl-10 pr-4 ${
+              active ? 'bg-indigo-100 text-indigo-900' : 'text-gray-900'
+            }`
+          }
+        >
+          {({ selected, active }) => (
+            <>
+              <span className={`absolute left-2 top-2 flex items-center`}>
+                {u.photoUrl
+                  ? <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
+                  : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
+                }
+              </span>
+              <span className={`ml-2 block truncate ${selected ? 'font-medium' : 'font-normal'}`}>
+                {u.firstName} {u.lastName}
+              </span>
+            </>
+          )}
+        </Listbox.Option>
+      ))}
+    </Listbox.Options>
+  </div>
+</Listbox>
                   <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
                 </div>
               </div>
@@ -931,7 +1056,7 @@ const [message, setMessage] = useState('');
                   value={message}
                   onChange={(e) => setMessage(e.target.value)}
                   placeholder="Please type request here..."
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg resize-none placeholder-gray-400 text-gray-700 text-base focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
                   rows={4}
                 />
               </div>
@@ -944,9 +1069,13 @@ const [message, setMessage] = useState('');
                 Send Request
               </button>
             </div>
-          </div>
+          </div>         
         )}
       </div>
+      <NotifyAllEmployees 
+      incidentId={incidentId} 
+      incidentData={incidentData}
+      />
     </div>
           </div>
         </div>

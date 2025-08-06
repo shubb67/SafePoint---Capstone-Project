@@ -17,10 +17,14 @@ import propertyIcon from "../assets/image/property-damage.png";
 import nearMissIcon from "../assets/image/danger.png";
 import hazardIcon   from "../assets/image/safety-hazards.png";
 import { calculateSafetyRecord } from '@/_utils/safetyRecordUtils';
+import RecentIncidents from "./components/RecentIncidents";
+
 
 export default function UserDashboard() {
   const navigate = useNavigate();
-
+  const auth = getAuth();
+  const userUid = auth.currentUser?.uid;
+  const [showIncidents, setShowIncidents] = useState(false);
   const [userName, setUserName] = useState("User");
   const [projectName, setProjectName] = useState("...");
   const [projectSite, setProjectSite] = useState("...");
@@ -33,6 +37,7 @@ export default function UserDashboard() {
     currentStreak: 0,
     previousRecord: 0
   });
+  const [userCompany, setUserCompany] = useState("");
 
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
@@ -42,8 +47,6 @@ export default function UserDashboard() {
     propertyDamage: propertyIcon,
     nearMiss: nearMissIcon,
   };
-
-  console.log("Incident Type Icons:", incidentTypeIcons);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -60,6 +63,8 @@ export default function UserDashboard() {
         const userSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
         const user = userSnap.docs[0]?.data();
         const userCompany = user?.company;
+        setUserCompany(userCompany);
+        console.log("User Company:", userCompany);
         
         setUserName(user?.firstName || "User");
         setProjectName(userCompany || "Unknown Project");
@@ -204,8 +209,9 @@ export default function UserDashboard() {
           </button>
         </div>
       </div>
-
-      <div className="mt-6 px-2">
+{!showIncidents ? (
+  <>
+      <div className="mt-4 px-2">
         <div className="bg-white rounded-xl shadow-sm p-3">
           <div className="flex justify-between mb-4">
             <div className="text-left">
@@ -229,7 +235,7 @@ export default function UserDashboard() {
         </div>
       </div>
 
-      <div className="mt-6 px-4 grid grid-cols-2 gap-4">
+      <div className="mt-5 px-4 grid grid-cols-2 gap-4">
         {cards.map(({ title, icon, onClick }) => (
           <button
             key={title}
@@ -247,8 +253,13 @@ export default function UserDashboard() {
       <div className="bg-gray-100 rounded-xl shadow-sm p-3 mt-6 mx-2">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-base font-semibold text-gray-800">Recent Incidents</h3>
-          <Link to="/reports" className="text-sm text-blue-600 hover:underline">View All</Link>
-        </div>
+          <button
+    onClick={() => setShowIncidents(true)}
+    className="text-sm font-medium text-blue-600 hover:underline"
+  >
+    View all
+  </button>
+   </div>
         <div className="space-y-3">
           {recentIncidents.map(({ id, type, location, ago, reportedBy, isCurrentUser }) => (
             <div
@@ -284,9 +295,27 @@ export default function UserDashboard() {
         )}
       </div>
 
+      </>
+) : (
+  // SHOW ONLY THE RECENT INCIDENTS FULL VIEW (like your screenshot)
+  <div className="flex flex-col items-center justify-center min-h-[50vh]">
+    <div className="w-full max-w-md">
+      <RecentIncidents userCompany={userCompany} />
+      <div className="mt-4 flex justify-end">
+        <button
+          onClick={() => setShowIncidents(false)}
+          className="text-sm font-medium text-blue-600 hover:underline"
+        >
+          Back to dashboard
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
-          <Link to="/" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+          <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
             <Home className="w-6 h-6" />
             <span className="text-xs">Home</span>
           </Link>
