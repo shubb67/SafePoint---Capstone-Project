@@ -281,58 +281,61 @@ function asUidArray(val) {
   };
 
  useEffect(() => {
-    // 1) Reporter
-    const reporterUid = incidentData?.personalInfo?.yourName;
-    if (reporterUid) {
-      getDoc(doc(db, 'users', reporterUid))
-        .then(snap => {
-          if (snap.exists()) {
-            setReporterName(snap.data().firstName);
-          } else {
-            setReporterName('Unknown Reporter');
-          }
-        })
-        .catch(() => setReporterName('Unknown Reporter'));
-    } else {
-      setReporterName(null);
-    }
+    async function fetchNames() {
+      // 1) Reporter
+      const reporterIds = asUidArray(incidentData?.personalInfo?.yourName);
+      if (reporterIds.length > 0) {
+        try {
+          const snap = await getDoc(doc(db, 'users', reporterIds[0]));
+          setReporterName(snap.exists() ? snap.data().firstName : 'Unknown Reporter');
+        } catch {
+          setReporterName('Unknown Reporter');
+        }
+      } else {
+        setReporterName(null);
+      }
 
    
-    // 2) Injured Persons
-    const injured = incidentData?.personalInfo?.injuredPersons;
-     if (injured) {
-      getDoc(doc(db, 'users', injured))
-        .then(snap => {
-          if (snap.exists()) {
-            setInjuredNames(snap.data().firstName);
-          } else {
-            setInjuredNames('Unknown Reporter');
-          }
-        })
-        .catch(() => setInjuredNames('Unknown Reporter'));
-    } else {
-      setInjuredNames(null);
-    }
+ // 2) Injured Persons
+      const injuredIds = asUidArray(incidentData?.personalInfo?.injuredPersons);
+      if (injuredIds.length > 0) {
+        try {
+          const injuredSnaps = await Promise.all(
+            injuredIds.map(uid => getDoc(doc(db, 'users', uid)))
+          );
+          const names = injuredSnaps
+            .map(snap => (snap.exists() ? snap.data().firstName : null))
+            .filter(Boolean);
+          setInjuredNames(names.join(', ') || 'Unknown Reporter');
+        } catch {
+          setInjuredNames('Unknown Reporter');
+        }
+      } else {
+        setInjuredNames(null);
+      }
+
     // 3) Witnesses
-    const witnesses = incidentData?.personalInfo?.witnesses;
-    if (witnesses) {
-      getDoc(doc(db, 'users', witnesses))
-        .then(snap => {
-          if (snap.exists()) {
-            setWitnessNames(snap.data().firstName);
-          } else {
-            setWitnessNames('Unknown Reporter');
-          }
-        })
-        .catch(() => setWitnessNames('Unknown Reporter'));
-    } else {
-      setWitnessNames(null);
+      const witnessIds = asUidArray(incidentData?.personalInfo?.witnesses);
+      if (witnessIds.length > 0) {
+        try {
+          const witnessSnaps = await Promise.all(
+            witnessIds.map(uid => getDoc(doc(db, 'users', uid)))
+          );
+          const names = witnessSnaps
+            .map(snap => (snap.exists() ? snap.data().firstName : null))
+            .filter(Boolean);
+          setWitnessNames(names.join(', ') || 'Unknown Reporter');
+        } catch {
+          setWitnessNames('Unknown Reporter');
+        }
+      } else {
+        setWitnessNames(null);
+      }
     }
-  },[
-    incidentData?.personalInfo?.yourName,
-    incidentData?.personalInfo?.injuredPersons,
-    incidentData?.personalInfo?.witnesses,
-  ]);
+       if (incidentData) {
+      fetchNames();
+       }
+ }, [incidentData]);
 
   useEffect(() => {
   async function fetchRequestUsers() {
@@ -615,10 +618,7 @@ const involvedUserIds = [
                 <MessageSquare className="w-4 h-4" />
                 <span>Chats</span>
               </a>
-              <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                <Layout className="w-4 h-4" />
-                <span>Templates</span>
-              </a>
+              
             </nav>
           </div>
         </aside>
@@ -677,55 +677,110 @@ const involvedUserIds = [
     </h2>
 
     {/* Four‐column row with vertical dividers */}
-    <div className="grid grid-cols-4 divide-x divide-gray-200">
-      {/* Reporter Name */}
-      <div className="px-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          Reporter Name
-        </p>
-        <p className="text-sm text-gray-900">
-          {reporterName != null
-                ? reporterName
-                : incidentData?.personalInfo?.yourName || 'Sarah Johnson'}
-        </p>
-      </div>
+  <div className={`grid ${incidentData?.incidentType === "injury"
+    ? "grid-cols-4"
+    : "grid-cols-3"
+  } divide-x divide-gray-200`}>
 
+  {/* Reporter Name (ALL) */}
+  <div className="px-4">
+    <p className="text-sm font-medium text-gray-700 mb-1">Reporter Name</p>
+    <p className="text-sm text-gray-900">
+      {reporterName != null
+        ? reporterName
+        : incidentData?.personalInfo?.yourName || 'Unknown Reporter'}
+    </p>
+  </div>
+
+  {/* --- Incident-type-specific fields --- */}
+  {incidentData?.incidentType === 'injury' && (
+    <>
       {/* Injured Person(s) */}
       <div className="px-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          Injured Person(s)
-        </p>
+        <p className="text-sm font-medium text-gray-700 mb-1">Injured Person(s)</p>
         <p className="text-sm text-gray-900">
-         {injuredNames != null 
-                ? injuredNames
-                : incidentData?.personalInfo?.injuredPersons ||
-                  'Michael Rodriguez, Construction Worker'}
+          {injuredNames != null
+            ? injuredNames
+            : incidentData?.personalInfo?.injuredPersons || 'None'}
         </p>
       </div>
-
       {/* Time Lost Injury? */}
       <div className="px-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          Time Lost Injury?
-        </p>
+        <p className="text-sm font-medium text-gray-700 mb-1">Time Lost Injury?</p>
         <p className="text-sm font-medium text-red-600">
-          {incidentData?.personalInfo?.wasInjured || 'Yes'}
+          {incidentData?.personalInfo?.wasInjured || 'No'}
         </p>
       </div>
+    </>
+  )}
 
-      {/* Witness/es */}
+  {incidentData?.incidentType === 'propertyDamage' && (
+    <>
+      {/* What Was Damaged */}
       <div className="px-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">
-          Witness/es
-        </p>
+        <p className="text-sm font-medium text-gray-700 mb-1">What Was Damaged</p>
         <p className="text-sm text-gray-900">
-           {witnessNames != null
-                ? witnessNames
-                : incidentData?.personalInfo?.witnesses ||
-                  'Emma Thompson, David Chen'}
+          {incidentData?.impactInfo?.damaged || 'Not specified'}
         </p>
       </div>
-    </div>
+      {/* Impact on Operations */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">Impact on Operations</p>
+        <p className="text-sm text-gray-900">
+          {incidentData?.impactInfo?.impactOps || 'Not specified'}
+        </p>
+      </div>
+    </>
+  )}
+
+  {incidentData?.incidentType === 'nearMiss' && (
+    <>
+      {/* Type of Concern */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">Type of Concern</p>
+        <p className="text-sm text-gray-900">
+          {incidentData?.impactInfo?.typeOfConcern || 'Not specified'}
+        </p>
+      </div>
+      {/* Severity */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">Severity</p>
+        <span className={`text-xs px-2 py-1 rounded-full ${getSeverityColor(incidentData?.personalInfo?.severity)}`}>
+          {incidentData?.impactInfo?.severity || 'Not specified'}
+        </span>
+      </div>
+    </>
+  )}
+
+  {incidentData?.incidentType === 'safetyHazard' && (
+    <>
+      {/* Equipment Involved */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">Equipment Involved</p>
+        <p className="text-sm text-gray-900">
+          {incidentData?.impactInfo?.equipment || 'Not specified'}
+        </p>
+      </div>
+      {/* Impact on Operation */}
+      <div className="px-4">
+        <p className="text-sm font-medium text-gray-700 mb-1">Impact on Operation</p>
+        <p className="text-sm text-gray-900">
+          {incidentData?.impactInfo?.impactOps || 'Not specified'}
+        </p>
+      </div>
+    </>
+  )}
+
+  {/* Witness/es (ALL) */}
+  <div className="px-4">
+    <p className="text-sm font-medium text-gray-700 mb-1">Witness/es</p>
+    <p className="text-sm text-gray-900">
+      {witnessNames != null
+        ? witnessNames
+        : incidentData?.personalInfo?.witnesses || 'None'}
+    </p>
+  </div>
+</div>
   </div>
 </div>
 
@@ -807,20 +862,20 @@ const involvedUserIds = [
     {/* Audio Description */}
     {incidentData?.incidentDetails?.audioUrl && (
       <div>
-        <p className="text-sm font-medium text-gray-700 mb-2">
-          Audio Description
-        </p>
-        <div className="flex items-center gap-2 bg-gray-50 p-3 rounded-lg">
-          <Play className="w-5 h-5 text-gray-500" />
-          <span className="text-sm text-gray-900">
+         <p className="text-sm font-medium text-gray-700 mb-2">Audio Description</p>
+        <div className="bg-gray-50 p-2 rounded-lg">
+          <audio
+            controls
+            src={incidentData.incidentDetails.audioUrl}
+            className="h-10"
+          >
+            Your browser does not support the audio element.
+          </audio>
+          <p className="mt-1 text-xs text-gray-500 truncate">
             {/* display the filename */}
             {incidentData.incidentDetails.audioUrl.split('/').pop()}
-          </span>
+         </p>
         </div>
-        <p className="mt-1 text-xs text-gray-500">
-          {/* you could compute or pass this in props */}
-          1 min 38 sec
-        </p>
       </div>
     )}
   </div>

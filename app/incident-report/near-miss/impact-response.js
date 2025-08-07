@@ -144,9 +144,11 @@ export default function NearMissImpact() {
               className="block w-full border border-gray-300 rounded-md p-2 text-black"
             >
               <option value="">Select…</option>
-              <option value="hazard">Hazard</option>
-              <option value="procedure">Procedure</option>
-              <option value="equipment">Equipment</option>
+              <option value="unsafeact">Unsafe Act</option>
+              <option value="unsafearea">Unsafe Area</option>
+              <option value="unsafeequipmentconditions">Unsafe Equipment Conditions</option>
+              <option value="unsafeuseofequipment">Unsafe Use of Equipment</option>
+              <option value="safetypolicyviolation">Safety Policy Violation</option>
             </select>
           </div>
 
