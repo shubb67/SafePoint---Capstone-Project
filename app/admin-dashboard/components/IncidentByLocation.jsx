@@ -231,7 +231,7 @@ const IncidentsByLocation = () => {
           ))}
         </div>
       </div>
-      <div className="relative h-64 flex items-center justify-center">
+      <div className="flex flex-col md:flex-row items-center justify-center h-54 gap-6">
         <div className="w-48 h-48">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>
@@ -239,7 +239,7 @@ const IncidentsByLocation = () => {
                 data={locationData}
                 cx="50%"
                 cy="50%"
-                innerRadius={60}
+                innerRadius={50}
                 outerRadius={80}
                 startAngle={90}
                 endAngle={450}
@@ -252,7 +252,7 @@ const IncidentsByLocation = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="absolute right-4 top-1/2 transform -translate-y-1/2 text-sm space-y-2">
+      <div className="text-sm space-y-2">
           {locationData.map((item, index) => (
             <div key={index} className="flex items-center gap-2 text-black">
               <span 

@@ -677,10 +677,18 @@ const involvedUserIds = [
     </h2>
 
     {/* Four‐column row with vertical dividers */}
-  <div className={`grid ${incidentData?.incidentType === "injury"
-    ? "grid-cols-4"
-    : "grid-cols-3"
-  } divide-x divide-gray-200`}>
+  <div
+    className={`grid ${
+      [
+        "injury",
+        "propertyDamage",
+        "nearMiss",
+        "safetyHazard",
+      ].includes(incidentData?.incidentType)
+        ? "grid-cols-4"
+        : "grid-cols-3"
+    } divide-x divide-gray-200`}
+  >
 
   {/* Reporter Name (ALL) */}
   <div className="px-4">
@@ -720,14 +728,14 @@ const involvedUserIds = [
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">What Was Damaged</p>
         <p className="text-sm text-gray-900">
-          {incidentData?.impactInfo?.damaged || 'Not specified'}
+          {incidentData?.impactInfo?.damaged.charAt(0).toUpperCase() + incidentData?.impactInfo?.damaged.slice(1).replace(/([A-Z])/g, ' $1').trim() || 'Not specified'}
         </p>
       </div>
       {/* Impact on Operations */}
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">Impact on Operations</p>
         <p className="text-sm text-gray-900">
-          {incidentData?.impactInfo?.impactOps || 'Not specified'}
+          {incidentData?.impactInfo?.impactOps.charAt(0).toUpperCase() + incidentData?.impactInfo?.impactOps.slice(1).replace(/([A-Z])/g, ' $1').trim() || 'Not specified'}
         </p>
       </div>
     </>
@@ -739,14 +747,14 @@ const involvedUserIds = [
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">Type of Concern</p>
         <p className="text-sm text-gray-900">
-          {incidentData?.impactInfo?.typeOfConcern || 'Not specified'}
+          {incidentData?.impactInfo?.typeOfConcern.charAt(0).toUpperCase() + incidentData?.impactInfo?.typeOfConcern.slice(1).replace(/([A-Z])/g, ' $1').trim() || 'Not specified'}
         </p>
       </div>
       {/* Severity */}
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">Severity</p>
         <span className={`text-xs px-2 py-1 rounded-full ${getSeverityColor(incidentData?.personalInfo?.severity)}`}>
-          {incidentData?.impactInfo?.severity || 'Not specified'}
+          {incidentData?.impactInfo?.severity.charAt(0).toUpperCase() + incidentData?.impactInfo?.severity.slice(1).replace(/([A-Z])/g, ' $1').trim()  || 'Not specified'}
         </span>
       </div>
     </>
@@ -758,14 +766,14 @@ const involvedUserIds = [
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">Equipment Involved</p>
         <p className="text-sm text-gray-900">
-          {incidentData?.impactInfo?.equipment || 'Not specified'}
+          {incidentData?.impactInfo?.equipment.charAt(0).toUpperCase() + incidentData?.impactInfo?.equipment.slice(1).replace(/([A-Z])/g, ' $1').trim()  || 'Not specified'}
         </p>
       </div>
       {/* Impact on Operation */}
       <div className="px-4">
         <p className="text-sm font-medium text-gray-700 mb-1">Impact on Operation</p>
         <p className="text-sm text-gray-900">
-          {incidentData?.impactInfo?.impactOps || 'Not specified'}
+          {incidentData?.impactInfo?.impactOps.charAt(0).toUpperCase() + incidentData?.impactInfo?.impactOps.slice(1).replace(/([A-Z])/g, ' $1').trim()  || 'Not specified'}
         </p>
       </div>
     </>

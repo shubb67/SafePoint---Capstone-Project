@@ -47,6 +47,8 @@ import SafePointDashboard from "./admin-dashboard/AdminDashboard";
 import ViewAllIncidents from "./admin-dashboard/components/viewAllIncident";
 import IncidentDetailView from "./admin-dashboard/components/IncidentTracker";
 import ChatSystem from "./ChatSystem/chat";
+import MyReportsScreen from "./user-dashboard/components/MyReports";
+import IncidentReportDetailMobile from "./user-dashboard/components/IncidentReportDetailMobile";
 
 function App() {
   if (typeof window === "undefined") {
@@ -100,6 +102,8 @@ function App() {
       <Route path="/reports" element={<ViewAllIncidents />} />
       <Route path="/incident-tracker/:incidentId" element={<IncidentDetailView />} />
       <Route path="/chat" element={<ChatSystem />} />
+      <Route path="/my-reports" element={<MyReportsScreen />} />
+      <Route path="/incident-report/:reportId" element={<IncidentReportDetailMobile />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

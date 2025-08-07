@@ -87,7 +87,7 @@ export default function IncidentType() {
             {
               key: "injury",
               icon: injuryIcon,
-              title: "Injury & Loss of Life",
+              title: "On-site Injury",
               desc: "This category covers any incidents where a person sustains physical harm.",
             },
             {
@@ -122,7 +122,7 @@ export default function IncidentType() {
               <img
                 src={imgUrl(icon)}
                 alt={title}
-                className="w-12 h-12 flex-shrink-0"
+                className="w-16 h-16 flex-shrink-0 mr-4 object-contain"
               />
               <div className="ml-4">
                 <h2 className="text-lg font-semibold text-gray-800">{title}</h2>

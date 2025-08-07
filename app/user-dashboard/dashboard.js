@@ -39,6 +39,7 @@ export default function UserDashboard() {
   });
   const [userCompany, setUserCompany] = useState("");
 
+
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
   const incidentTypeIcons = {
@@ -47,6 +48,7 @@ export default function UserDashboard() {
     propertyDamage: propertyIcon,
     nearMiss: nearMissIcon,
   };
+  
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -190,7 +192,7 @@ export default function UserDashboard() {
     {
       title: "View Your Reports",
       icon: <FileText className="w-28 h-28 text-gray-800" />,
-      onClick: () => navigate("/reports"),
+      onClick: () => navigate("/my-reports"),
     },
   ];
 
@@ -263,9 +265,10 @@ export default function UserDashboard() {
         <div className="space-y-3">
           {recentIncidents.map(({ id, type, location, ago, reportedBy, isCurrentUser }) => (
             <div
-              key={id}
-              className="bg-white rounded-xl shadow p-4 flex items-center justify-between"
-            >
+      onClick={() => navigate(`/incident-report/${id}`)}
+      key={id}
+      className=" bg-white rounded-xl shadow p-4 flex items-center justify-between transition hover:bg-gray-50"
+    >
               <div className="flex items-center space-x-3">
                 <div className="bg-gray-100">
                   <img
@@ -313,7 +316,7 @@ export default function UserDashboard() {
   </div>
 )}
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-4">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
           <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
             <Home className="w-6 h-6" />
