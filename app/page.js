@@ -103,7 +103,7 @@ function App() {
       <Route path="/incident-tracker/:incidentId" element={<IncidentDetailView />} />
       <Route path="/chat" element={<ChatSystem />} />
       <Route path="/my-reports" element={<MyReportsScreen />} />
-      <Route path="/incident-report/:reportId" element={<IncidentReportDetailMobile />} />
+      <Route path="/incident-report/:id" element={<IncidentReportDetailMobile />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

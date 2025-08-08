@@ -437,7 +437,7 @@ export default function NearMissIncidentDetails() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Don't want to type? Just speak.
+                Don&apos;t want to type? Just speak.
                 </label>
                 <button
                   type="button"
