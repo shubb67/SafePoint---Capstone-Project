@@ -21,6 +21,7 @@ export default function SafetyHazardPersonalInfo() {
   const [users, setUsers]         = useState([]);
   const [companyName, setCompanyName] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+  
 
   // Get current user's company name on mount
   useEffect(() => {

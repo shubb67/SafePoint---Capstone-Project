@@ -48,7 +48,7 @@ export default function UserDashboard() {
     propertyDamage: propertyIcon,
     nearMiss: nearMissIcon,
   };
-  
+
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -191,7 +191,7 @@ export default function UserDashboard() {
     },
     {
       title: "View Your Reports",
-      icon: <FileText className="w-28 h-28 text-gray-800" />,
+      icon: <FileText className="w-28 h-28 text-black" />,
       onClick: () => navigate("/my-reports"),
     },
   ];
@@ -226,11 +226,11 @@ export default function UserDashboard() {
           </div>
           <div className="flex gap-4">
             <div className="flex-1 bg-purple-300 text-[#374151] rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold">{safetyRecord.currentStreak}</p>
+              <p className="text-5xl font-bold">{safetyRecord.currentStreak}</p>
               <p className="text-xs">Incident-Free</p>
             </div>
             <div className="flex-1 bg-green-200 text-black rounded-lg p-4 text-center">
-              <p className="text-3xl font-bold">{safetyRecord.previousRecord}</p>
+              <p className="text-5xl font-bold">{safetyRecord.previousRecord}</p>
               <p className="text-xs">Previous Record</p>
             </div>
           </div>

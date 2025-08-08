@@ -1066,7 +1066,7 @@ const involvedUserIds = [
                   ? <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
                   : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
                 }
-                <span className="block truncate text-black">{u.firstName} {u.lastName}</span>
+                <span className="block truncate text-black">{u.firstName} {u.surname}</span>
               </>
             ) : <span className="text-gray-400">Select User</span>;
           })()
