@@ -80,7 +80,7 @@ export default function UserDashboard() {
 
         // Get all users from the same company/organization
         const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", userCompany)));
-        const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
+        const orgUserIds = (orgUsersSnap?.docs || []).map(doc => doc.id);
 
         if (orgUserIds.length === 0) {
           setIsLoading(false);
@@ -197,12 +197,12 @@ export default function UserDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
+    <div className="min-h-screen bg-gray-50 pb-25">
       <div className="px-4 pt-6">
         <div className="flex items-center justify-between">
           <div>
             <p className="text-sm text-gray-500">{formattedDate}</p>
-            <h2 className="mt-1 text-2xl font-semibold text-gray-900">
+            <h2 className="mt-2 text-2xl font-semibold text-gray-900">
               Good morning, {userName}!
             </h2>
           </div>
@@ -215,7 +215,7 @@ export default function UserDashboard() {
   <>
       <div className="mt-4 px-2">
         <div className="bg-white rounded-xl shadow-sm p-3">
-          <div className="flex justify-between mb-4">
+          <div className="flex justify-between mb-2">
             <div className="text-left">
               <p className="text-sm text-gray-500">{projectName}</p>
               <p className="text-md text-black font-bold">{projectSite}</p>
@@ -263,7 +263,7 @@ export default function UserDashboard() {
   </button>
    </div>
         <div className="space-y-3">
-          {recentIncidents.map(({ id, type, location, ago, reportedBy, isCurrentUser }) => (
+          {recentIncidents.map(({ id, type, location, ago, reportedBy }) => (
             <div
       onClick={() => navigate(`/incident-report/${id}`)}
       key={id}

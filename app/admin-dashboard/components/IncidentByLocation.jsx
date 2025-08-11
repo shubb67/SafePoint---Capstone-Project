@@ -163,8 +163,8 @@ const IncidentsByLocation = () => {
 
   if (loading) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-black">Incidents by Location</h2>
         </div>
         <div className="flex items-center justify-center h-64">
@@ -176,11 +176,11 @@ const IncidentsByLocation = () => {
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-black">Incidents by Location</h2>
         </div>
-        <div className="flex items-center justify-center h-64">
+        <div className="flex items-center justify-center h-60">
           <div className="text-red-500">Error: {error}</div>
         </div>
       </div>
@@ -189,8 +189,8 @@ const IncidentsByLocation = () => {
 
   if (locationData.length === 0) {
     return (
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex justify-between items-center mb-4">
+      <div className="bg-white rounded-lg shadow p-4">
+        <div className="flex justify-between items-center mb-2">
           <h2 className="text-lg font-semibold text-black">Incidents by Location</h2>
           <div className="flex gap-2 text-xs">
             {timeRanges.map((range) => (
@@ -214,8 +214,8 @@ const IncidentsByLocation = () => {
   }
 
   return (
-    <div className="bg-white rounded-lg shadow p-6">
-      <div className="flex justify-between items-center mb-4">
+    <div className="bg-white rounded-lg shadow p-5">
+      <div className="flex justify-between items-center mb-2">
         <h2 className="text-lg font-semibold text-black">Incidents by Location</h2>
         <div className="flex gap-2 text-xs">
           {timeRanges.map((range) => (
@@ -231,7 +231,7 @@ const IncidentsByLocation = () => {
           ))}
         </div>
       </div>
-      <div className="flex flex-col md:flex-row items-center justify-center h-54 gap-6">
+      <div className="flex flex-col md:flex-row items-center justify-center h-44 gap-5">
         <div className="w-48 h-48">
           <ResponsiveContainer width="100%" height="100%">
             <PieChart>

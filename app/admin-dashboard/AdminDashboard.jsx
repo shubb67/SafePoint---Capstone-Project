@@ -289,7 +289,7 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
           else if (status === 'closed') incidentStatusCounts.closed++;
           
           // Only take the first 5 for display in the table
-          if (formattedIncidents.length < 5) {
+          if (formattedIncidents.length < 3) {
             formattedIncidents.push({
               id: doc.id,
               type: incidentType,
@@ -340,7 +340,7 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
     <div className="min-h-screen bg-[#f6f9ff]">
       {/* Header */}
      <header className="bg-[#1a2b5c] text-white">
-        <div className="flex items-center justify-between px-6 py-3">
+        <div className="flex items-center justify-between px-4 py-1.5">
           <h1 className="text-xl font-semibold">SafePoint</h1>
           <div className="flex items-center gap-4">
             <div className="relative" ref={notificationRef}>
@@ -356,7 +356,7 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
               
               {/* Notification Dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 mt-2 w-96 bg-white rounded-lg shadow-xl z-50 max-h-[600px] overflow-hidden">
+                <div className="absolute right-0 mt-1 w-96 bg-white rounded-lg shadow-xl z-50 max-h-[600px] overflow-hidden">
                   <div className="bg-gray-50 px-4 py-3 border-b flex items-center justify-between">
                     <h3 className="text-lg font-semibold text-gray-800">Notifications</h3>
                     <div className="flex items-center gap-2">
@@ -480,40 +480,40 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
    {/* Main Content */}
    {currentView === 'dashboard' ? (
-        <main className="flex-1 p-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <main className="flex-1 p-2">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-2">
             {/* Incident Tracker */}
-            <div className="bg-white rounded-lg shadow p-4">
-              <h2 className="text-lg font-semibold mb-4 text-black">Incident Tracker</h2>
-              <div className="flex gap-3">
-                <div className="flex-1 bg-purple-300 rounded-lg p-4 text-center">
+            <div className="bg-white rounded-md shadow p-2.5">
+              <h2 className="text-lg font-semibold mb-0.5 text-black">Incident Tracker</h2>
+              <div className="flex gap-2">
+                <div className="flex-1 bg-purple-300 rounded-lg p-1.5 text-center">
                   <div className="text-4xl font-bold text-[#374151]">{recentStats.last7Days}</div>
                   <div className="text-sm text-[#374151]">New Incidents</div>
                 </div>
-                <div className="flex-1 bg-orange-200 rounded-lg p-4 text-center">
+                <div className="flex-1 bg-orange-200 rounded-lg p-1.5 text-center">
                   <div className="text-4xl font-bold text-[#374151]">1</div>
                   <div className="text-sm text-[#374151]">Under Review</div>
                 </div>
-                <div className="flex-1 bg-green-200 rounded-lg p-4 text-center">
+                <div className="flex-1 bg-green-200 rounded-lg p-1.5 text-center">
                   <div className="text-4xl font-bold text-[#374151]">4</div>
                   <div className="text-sm text-[#374151]">Closed Incidents</div>
                 </div>
               </div>
             </div>
 {/* Safety Record */}
-<div className="bg-white rounded-lg shadow p-5">
-  <h2 className="text-lg font-medium mb-3 text-gray-900">Safety Record</h2>
-  <div className="flex gap-3">
+<div className="bg-white rounded-lg shadow p-4">
+  <h2 className="text-lg font-semibold mb-2 text-gray-900">Safety Record</h2>
+  <div className="flex gap-2">
     <div className="flex-1 bg-indigo-100 rounded-lg p-2">
       <div className="text-center">
-        <span className="text-5xl font-semibold text-gray-900">{safetyRecord.currentStreak}</span>
+        <span className="text-4xl font-semibold text-gray-900">{safetyRecord.currentStreak}</span>
         <span className="text-lg text-gray-600 ml-2">days</span>
       </div>
       <div className="text-sm text-gray-600 text-center mt-2">Without Incident</div>
     </div>
-    <div className="flex-1 bg-green-100 rounded-lg p-4">
+    <div className="flex-1 bg-green-100 rounded-md p-3">
       <div className="text-center">
-        <span className="text-5xl font-semibold text-gray-900">{safetyRecord.previousRecord}</span>
+        <span className="text-4xl font-semibold text-gray-900">{safetyRecord.previousRecord}</span>
         <span className="text-lg text-gray-600 ml-2">days</span>
       </div>
       <div className="text-sm text-gray-600 text-center mt-2">Previous Record</div>
@@ -521,8 +521,8 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
   </div>
 </div>
              {/* Submitted Incidents */}
-            <div className="bg-white rounded-lg shadow p-6">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-lg shadow p-4">
+              <div className="flex justify-between items-center mb-2">
                 <h2 className="text-xl font-semibold text-[#1e293b]">Submitted Incidents</h2>
                 <a href="#"  
   onClick={(e) => {
@@ -531,12 +531,12 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
   }} className="text-blue-600 text-sm font-medium">View All</a>
               </div>
               {isLoading ? (
-                <div className="flex justify-center py-6">
+                <div className="flex justify-center py-5">
                   <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
                 <div>
-                  <div className="grid grid-cols-4 mb-4">
+                  <div className="grid grid-cols-4 mb-3">
                     <div className="text-sm text-gray-400 font-normal">Name</div>
                     <div className="text-sm text-gray-400 font-normal">Date</div>
                     <div className="text-sm text-gray-400 font-normal">Severity</div>
@@ -544,14 +544,14 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                   </div>
                   
                   {recentIncidents.length > 0 ? (
-                      <div className="space-y-6">
+                      <div className="space-y-2">
                         {recentIncidents.map(incident => (
                           <div 
                             key={incident.id} 
-                            className="grid grid-cols-4 border-t pt-4 cursor-pointer hover:bg-gray-50 transition-colors"
+                            className="grid grid-cols-4 border-t pt-2 cursor-pointer hover:bg-gray-50 transition-colors"
                             onClick={() => handleIncidentClick(incident.id)}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-1">
                               <div className={`w-8 h-8 flex items-center justify-center rounded-lg ${
                                 incident.type === 'injury' ? '' : 
                                 incident.type === 'safetyHazard' ? 'bg-blue-100' : 
@@ -563,7 +563,7 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                                   className="w-8 h-8 object-fill border rounded-md"
                                 />
                               </div>
-                              <span className="text-[#1e293b] font-medium">
+                              <span className="text-[#1e293b] font-medium text-sm">
                                 {incident.type === 'injury' ? 'Injury' : 
                                  incident.type === 'safetyHazard' ? 'Safety Hazard' : 
                                  incident.type === 'nearMiss' ? 'Near Miss' : 
@@ -571,9 +571,9 @@ const imgUrl = img => (img && (img.src || img.default)) || img || "";
                                  incident.type.charAt(0).toUpperCase() + incident.type.slice(1).replace(/([A-Z])/g, ' $1').trim()}
                               </span>
                             </div>
-                            <div className="text-gray-400 self-center">{incident.date}</div>
+                            <div className="text-gray-400 self-center text-sm">{incident.date}</div>
                             <div className="self-center">
-                              <span className={`font-medium ${
+                              <span className={`font-medium text-sm ${
                                 incident.severity === 'high' ? 'text-red-500' : 
                                 incident.severity === 'medium' ? 'text-amber-500' : 'text-green-500'
                               }`}>

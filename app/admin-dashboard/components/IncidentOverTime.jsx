@@ -15,7 +15,7 @@ import {
 const SOFT_BLUE = "#CBD5FE"; // match screenshot bar color
 
 export default function IncidentsOverTime() {
-  const [range, setRange] = useState("1Y");
+  const [range, setRange] = useState("1QR");
   const [loading, setLoading] = useState(true);
   const [chartData, setChartData] = useState([]);
   const [error, setError] = useState(null);
