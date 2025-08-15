@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import Image from 'next/image';
 import NewIncidentIcon from "../assets/image/icon456.png";
-import { collection, getDocs, where, query, orderBy, limit } from "firebase/firestore";
+import { collection, getDocs, where, query, orderBy, onSnapshot } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 import injuryIcon   from "../assets/image/injury.png";
@@ -18,6 +18,7 @@ import nearMissIcon from "../assets/image/danger.png";
 import hazardIcon   from "../assets/image/safety-hazards.png";
 import { calculateSafetyRecord } from '@/_utils/safetyRecordUtils';
 import RecentIncidents from "./components/RecentIncidents";
+import NotificationCenter from "./components/NotificationCenter";
 
 
 export default function UserDashboard() {
@@ -38,6 +39,8 @@ export default function UserDashboard() {
     previousRecord: 0
   });
   const [userCompany, setUserCompany] = useState("");
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
 
 
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
@@ -49,6 +52,26 @@ export default function UserDashboard() {
     nearMiss: nearMissIcon,
   };
 
+  useEffect(() => {
+    const auth = getAuth();
+    const currentUser = auth.currentUser;
+    if (!currentUser) return;
+  
+    // listen for unread notifications for this user
+    const q = query(
+      collection(db, "notifications"),
+      where("recipientId", "==", currentUser.uid),
+      where("read", "==", false)
+    );
+  
+    const unsub = onSnapshot(q, (snap) => {
+      setUnreadCount(snap.size);
+    }, (err) => {
+      console.error("Notification listener error:", err);
+    });
+  
+    return () => unsub();
+  }, []);
   
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -191,13 +214,16 @@ export default function UserDashboard() {
     },
     {
       title: "View Your Reports",
-      icon: <FileText className="w-28 h-28 text-black" />,
+      icon: <FileText className="w-28 h-28 text-[#192C63]" />,
       onClick: () => navigate("/my-reports"),
     },
   ];
 
   return (
     <div className="min-h-screen bg-gray-50 pb-25">
+         {!showNotifications ? (
+      <>
+
       <div className="px-4 pt-6">
         <div className="flex items-center justify-between">
           <div>
@@ -206,8 +232,17 @@ export default function UserDashboard() {
               Good morning, {userName}!
             </h2>
           </div>
-          <button className="p-2 rounded-full bg-white shadow">
-            <Bell className="w-6 h-6 text-gray-700" />
+          <button className="p-2 rounded-full bg-white shadow" 
+          aria-label="Open notifications"
+          onClick={() => setShowNotifications(true)}>
+          <Bell className="w-6 h-6 text-gray-700" />
+  {unreadCount > 0 && (
+    <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1
+                     rounded-full bg-red-500 text-white text-[10px] leading-[18px]
+                     text-center font-semibold">
+      {unreadCount > 9 ? "9+" : unreadCount}
+    </span>
+  )}
           </button>
         </div>
       </div>
@@ -315,6 +350,11 @@ export default function UserDashboard() {
     </div>
   </div>
 )}
+ </>
+    ) : (
+      // Notifications view (everything else hidden)
+      <NotificationCenter />
+    )}
 
       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-4">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">

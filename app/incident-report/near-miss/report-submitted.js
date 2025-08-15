@@ -30,6 +30,7 @@ export default function ReportSubmitted() {
         if (!user) throw new Error("Not authenticated");
 
         const userSnap = await getDoc(doc(db, "users", user.uid));
+        const userData = userSnap.data();
         const orgId = userSnap.data()?.organizationId || null;
 
         const reportRef = await addDoc(collection(db, "reports"), {
@@ -42,6 +43,25 @@ export default function ReportSubmitted() {
         await updateDoc(reportRef, { reportId: reportRef.id });
         // now store it in context:
         dispatch({ type: "SET_REPORT_ID", payload: reportRef.id  });
+        // create a notification for the reporter (you)
+        const incidentType = incident?.incidentType || "incident";
+        const location =
+          incident?.incidentDetails?.location ||
+          incident?.incidentDetails?.locationId ||
+          "Unknown Location";
+
+        await addDoc(collection(db, "notifications"), {
+          toUserId: user.uid,                    // recipient
+          fromUserId: user.uid,                  // who triggered it
+          fromUserName: userData.firstName || "You",
+          company: userData.company || null,
+          incidentId: reportRef.id,              // link target
+          type: "report",                        // used by NotificationCenter
+          title: "Your Incident Report Was Submitted",
+          message: `Your ${incidentType} report from ${location} has been successfully submitted.`,
+          status: "unread",
+          createdAt: serverTimestamp(),
+        });
         setLoading(false);
       } catch (e) {
         console.error("Submit error:", e);

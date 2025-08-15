@@ -21,7 +21,7 @@ import {
   FileQuestion,
   ChevronDown,
 } from 'lucide-react';
-import { collection, getDocs, where, query, orderBy, limit, doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs, where, query, orderBy, doc, getDoc, updateDoc, serverTimestamp, addDoc, arrayUnion, Timestamp } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 import { Link } from 'react-router-dom';
@@ -33,11 +33,7 @@ import hazardIcon from "../../assets/image/safety-hazards.png";
 import { useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import NotifyAllEmployees from './NotifyEmployees';
-import { Listbox } from '@headlessui/react'
-
-
-
-
+import { Listbox } from '@headlessui/react';
 
 
 export default function IncidentDetailView() {
@@ -68,39 +64,119 @@ const [message, setMessage] = useState('');
 
   const [notifyMessage, setNotifyMessage] = useState('');
   const [requestUserOptions, setRequestUserOptions] = useState([]);
+  const [isSendingRequest, setIsSendingRequest] = useState(false);
+
 
 
 
 
   // Helper function to get the right icon for each incident type
-  const getIncidentIcon = (type) => {
-    switch(type) {
-      case 'injury':
-        return injuryIcon;
-      case 'propertyDamage':
-        return propertyIcon;
-      case 'nearMiss':
-        return nearMissIcon;
-      case 'safetyHazard':
-        return hazardIcon;
-      default:
-        return hazardIcon;
-    }
-  };
+const getIncidentIcon = (type) => {
+  switch(type) {
+    case 'injury':
+      return injuryIcon;
+    case 'propertyDamage':
+      return propertyIcon;
+    case 'nearMiss':
+      return nearMissIcon;
+    case 'safetyHazard':
+      return hazardIcon;
+    default:
+      return hazardIcon; // Default icon
+  }
+};
+
+// Helper to format image URL
+const imgUrl = img => (img && (img.src || img.default)) || img || "";
+
+
+
+  // --- helpers: write a notification doc ---
+async function sendNotification(recipientUid, payload = {}) {
+  if (!recipientUid) return;
+  await addDoc(collection(db, "notifications"), {
+    userId: recipientUid,                   // who will see it
+    company: payload.company || "",         // optional
+    title: payload.title || "Notification",
+    message: payload.message || "",
+    type: payload.type || "update",         // "report" | "update" | "status" | "infoRequest"
+    relatedReportId: payload.relatedReportId || null,
+    createdAt: serverTimestamp(),
+    isRead: false,
+    // you can add extra fields (e.g., newStatus) if you want
+    ...payload.extra,
+  });
+}
+
 
   const handleSendNotification = () => {
     console.log('Sending notification to all employees:', notifyMessage);
     // Add your notification logic here
   };
-  const handleSendRequest = () => {
-    // Handle send request logic here
-    console.log('Sending request to:', selectedUser);
-    console.log('Message:', message);
-    // Reset form after sending
-    setSelectedUser('');
-    setMessage('');
-    setShowRequestDetails(false);
+  const handleSendRequest = async () => {
+    if (!selectedUser || !message.trim() || isSendingRequest) return;
+  
+    setIsSendingRequest(true);
+    try {
+      const currentUser = getAuth().currentUser;
+      if (!currentUser) throw new Error("Not authenticated");
+      if (!incidentId) throw new Error("No incident ID");
+  
+      // A stable id so we can avoid duplicates
+      const requestId = `${currentUser.uid}-${incidentId}-${Date.now()}`;
+  
+      // 1) Update the report ONCE
+      const incidentRef = doc(db, "reports", incidentId);
+      // read once so we can ensure we don’t add the same request twice
+      const snap = await getDoc(incidentRef);
+      if (!snap.exists()) throw new Error("Incident not found");
+  
+      const requestEntry = {
+        requestId,
+        requestedFrom: selectedUser,          // UID
+        requestedBy: currentUser.uid,         // admin UID
+        requestedByName: currentUser.displayName || adminName || "Admin",
+        message: message.trim(),
+        createdAt: Timestamp.now(),
+        type: "moreInfo",                     // for filtering later
+      };
+  
+      // write a single field: needsMoreInfo + append ONE entry to infoRequests
+      await updateDoc(incidentRef, {
+        needsMoreInfo: true,
+        lastUpdated: Timestamp.now(),
+        infoRequests: arrayUnion(requestEntry)
+      });
+  
+       // 2) Drop a notification (keep your broadcast in `notify/` untouched)
+    await addDoc(collection(db, 'notifications'), {
+      type: 'infoRequest',
+      company: companyName,
+      incidentId,
+      toUserId: selectedUser,
+      fromUserId: currentUser.uid,
+      fromUserName: currentUser.displayName || adminName || 'Admin',
+      text: message.trim(),
+
+      status: 'unread',
+      createdAt: serverTimestamp(),
+      message: `Report #${incidentId} needs additional details to move forward`,
+    });
+  
+      // 3) Reset UI
+      setSelectedUser("");
+      setMessage("");
+      setShowRequestDetails(false);
+    } catch (err) {
+      console.error("Failed to send request:", err);
+      alert(`Failed to send request: ${err.message}`);
+    } finally {
+      setIsSendingRequest(false);
+    }
   };
+  
+  
+  
 
 function asUidArray(val) {
   if (!val) return [];
@@ -168,7 +244,16 @@ function asUidArray(val) {
         type: 'success', 
         text: 'Incident status updated to Under Review.' 
       });
-
+      const reporterUid = asUidArray(incidentData?.personalInfo?.yourName)?.[0] || null;
+      await sendNotification(reporterUid, {
+        company: companyName,
+        type: "review",
+        title: "Your Report Was Assigned for Review",
+        message: `Your ${getIncidentTypeTitle(incidentData?.incidentType)} has been sent to ${adminName || 'Admin'} for Review.`,
+        relatedReportId: incidentId,
+        extra: { newStatus: "underReview" },
+      });
+      
       // Update local state
       setIncidentData(prev => ({ ...prev, status: 'underReview' }));
 
@@ -230,12 +315,21 @@ function asUidArray(val) {
         text: 'Report has been rejected.' 
       });
 
+      const reporterUid = asUidArray(incidentData?.personalInfo?.yourName)?.[0] || null;
+await sendNotification(reporterUid, {
+  company: companyName,
+  type: "rejected",
+  title: "Your Report Was Rejected",
+  message: `Reason: ${rejectionReason}`,
+  relatedReportId: incidentId
+});
+
       // Update local state
       setIncidentData(prev => ({ ...prev, status: 'rejected' }));
 
       // Redirect after 2 seconds
       setTimeout(() => {
-        navigate('/reports');
+        navigate('/admin-dashboard');
       }, 2000);
 
     } catch (error) {
@@ -544,7 +638,16 @@ const involvedUserIds = [
         type: 'success', 
         text: 'Incident has been closed successfully.' 
       });
-
+      const reporterUid = asUidArray(incidentData?.personalInfo?.yourName)?.[0] || null;
+      await sendNotification(reporterUid, {
+        company: companyName,
+        type: "status",
+        title: "Your Report Was Closed",
+        message: "The incident has been resolved and the report is now closed.",
+        relatedReportId: incidentId,
+        extra: { newStatus: "closed" },
+      });
+      
       // Update local state
       setIncidentData(prev => ({ ...prev, status: 'closed' }));
 
@@ -637,7 +740,11 @@ const involvedUserIds = [
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex items-start gap-4">
             <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
+            <img 
+                                  src={imgUrl(getIncidentIcon(incidentData?.incidentType))}
+                                  alt={incidentData?.incidentType}
+                                  className="w-12 h-12 object-fill border rounded-lg"
+                                />
             </div>
             <div className="flex-1">
 <h1 className="text-xl font-semibold text-gray-900 mb-1">
@@ -1125,12 +1232,13 @@ const involvedUserIds = [
               </div>
 
               <button
-                onClick={handleSendRequest}
-                disabled={!selectedUser || !message.trim()}
-                className="w-full py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
-              >
-                Send Request
-              </button>
+  onClick={handleSendRequest}
+  disabled={!selectedUser || !message.trim() || isSendingRequest}
+  className="w-full py-3 bg-indigo-900 text-white rounded-lg hover:bg-indigo-800 transition-colors font-medium disabled:bg-gray-300 disabled:cursor-not-allowed"
+>
+  {isSendingRequest ? "Sending..." : "Send Request"}
+</button>
+
             </div>
           </div>         
         )}

@@ -34,18 +34,18 @@ export default function RecentNotifications({ userCompany }) {
 
   useEffect(() => {
     if (!userCompany) return;
-
-    async function fetchNotifications() {
       setIsLoading(true);
-      try {
-        // NEW PATH: notification/{company}/notify
-        const q = query(
-          collection(db, "notification", userCompany, "notify"),
-          orderBy("createdAt", "desc"),
-          limit(10)
-        );
 
-        const snapshot = await onSnapshot(q);
+     // NEW PATH: notification/{company}/notify
+    const q = query(
+      collection(db, "notification", userCompany, "notify"),
+      orderBy("createdAt", "desc"),
+      limit(10)
+    );
+
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
         const items = snapshot.docs.map((doc) => {
           const data = doc.data();
 
@@ -68,12 +68,15 @@ export default function RecentNotifications({ userCompany }) {
         });
 
         setIncidents(items);
-      } finally {
+        setIsLoading(false);
+      },
+      (error) => {
+        console.error("Failed to fetch notifications:", error);
         setIsLoading(false);
       }
-    }
+    );
 
-    fetchNotifications();
+    return () => unsubscribe();
   }, [userCompany]);
 
   return (
