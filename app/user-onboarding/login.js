@@ -293,7 +293,7 @@ export default function Login() {
             
             <div className="text-center">
               <p className="text-sm text-gray-600">
-                Don't have an account?{' '}
+              Don&apos;t have an account?{' '}
                 <Link
                   to="/register"
                   className="font-semibold text-[#1E63FF] hover:underline"

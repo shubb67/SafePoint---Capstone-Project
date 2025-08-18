@@ -19,34 +19,35 @@ export default function SignUpLanding() {
   // if (isDesktop) return null;
   return (
     <div className="min-h-dvh w-full bg-white flex items-stretch justify-center">
-      <div className="w-full max-w-[480px] mx-auto flex flex-col">
-        {/* HERO */}
-        <div className="relative w-full">
-  <img
-    src="assets/images/hero.png"
-    alt=""
-    className="block w-full h-auto object-contain select-none"
-    draggable="false"
-  />
+      <div className="w-full max-w-[480px] mx-auto flex flex-col h-dvh">
+        {/* HERO - Reduced height */}
+        <div className="relative w-full flex-shrink-0" style={{ maxHeight: '40vh' }}>
+          <img
+            src="assets/images/hero.png"
+            alt=""
+            className="block w-full h-full object-cover object-bottom select-none"
+            draggable="false"
+            style={{ maxHeight: '40vh' }}
+          />
 
-  {/* Exact gradient: linear-gradient(180deg, rgba(255,255,255,0) 0%, #FFF 83.16%) */}
-  <div
-    className="pointer-events-none absolute inset-x-0 bottom-0"
-    style={{
-      height: "22%", 
-      background:
-        "linear-gradient(180deg, rgba(255,255,255,0) 0%, #FFFFFF 83.16%)",
-    }}
-  />
+          {/* Exact gradient: linear-gradient(180deg, rgba(255,255,255,0) 0%, #FFF 83.16%) */}
+          <div
+            className="pointer-events-none absolute inset-x-0 bottom-0"
+            style={{
+              height: "22%", 
+              background:
+                "linear-gradient(180deg, rgba(255,255,255,0) 0%, #FFFFFF 83.16%)",
+            }}
+          />
 
-  {/* Centered SP+ badge overlapping image + content */}
-  <div className="absolute left-1/2 -translate-x-1/2 translate-y-6 bottom-0">
-    <ShieldSPLarge />
-  </div>
-</div>
+          {/* Centered SP+ badge overlapping image + content */}
+          <div className="absolute left-1/2 -translate-x-1/2 translate-y-6 bottom-0">
+            <ShieldSPLarge />
+          </div>
+        </div>
 
-        {/* CONTENT */}
-        <div className="px-5 pt-16 pb-8">
+        {/* CONTENT - Scrollable if needed */}
+        <div className="flex-1 overflow-y-auto px-5 pt-16 pb-0">
           <h1 className="text-[#192C63] text-center font-extrabold tracking-tight leading-[1.05] text-[42px]">
             Welcome to
             <br />
@@ -57,9 +58,11 @@ export default function SignUpLanding() {
             Safer worksites start here. Report incidents, upload
             evidence, and keep your team protected.
           </p>
+        </div>
 
-          {/* Buttons */}
-          <div className="mt-8 space-y-4">
+        {/* BUTTONS - Fixed at bottom */}
+        <div className="flex-shrink-0 px-5 pb-8 pt-6 bg-white">
+          <div className="space-y-4">
             <Link to="/join-with-passcode" className="block">
               <button
                 type="button"
