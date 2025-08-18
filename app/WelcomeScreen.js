@@ -2,8 +2,21 @@
 "use client";
 import React from "react";
 import { Link } from "react-router-dom"; // swap to next/link if needed
+import { useNavigate } from "react-router-dom";
+import useIsDesktop from "./hooks/useIsDesktop";
+import {useEffect} from "react";
 
 export default function SignUpLanding() {
+  const navigate = useNavigate();
+  const isDesktop = useIsDesktop(1024); // desktop if ≥ 1024px or UA says non‑mobile
+
+  // useEffect(() => {
+  //   if (isDesktop) {
+  //     navigate("/sign-up", { replace: true });
+  //   }
+  // }, [isDesktop, navigate]);
+
+  // if (isDesktop) return null;
   return (
     <div className="min-h-dvh w-full bg-white flex items-stretch justify-center">
       <div className="w-full max-w-[480px] mx-auto flex flex-col">
@@ -47,7 +60,7 @@ export default function SignUpLanding() {
 
           {/* Buttons */}
           <div className="mt-8 space-y-4">
-            <Link to="/create-account" className="block">
+            <Link to="/join-with-passcode" className="block">
               <button
                 type="button"
                 className="w-full h-14 rounded-xl bg-gray-100 text-gray-900 font-semibold border border-gray-200 shadow-sm hover:bg-gray-200 active:scale-[0.99] transition"

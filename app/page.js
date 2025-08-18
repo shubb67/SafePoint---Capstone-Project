@@ -49,7 +49,16 @@ import IncidentDetailView from "./admin-dashboard/components/IncidentTracker";
 import ChatSystem from "./ChatSystem/chat";
 import MyReportsScreen from "./user-dashboard/components/MyReports";
 import IncidentReportDetailMobile from "./user-dashboard/components/IncidentReportDetailMobile";
-
+import SignUpDesktop from "./DesktopView/signup";
+import AddProfileDesktop from "./DesktopView/AddProfileDesktop";
+import CreateJoinWorkspace from "./DesktopView/CreateJoinWorkspace";
+import CompanyDetails from "./DesktopView/CreateWorkspace/CompanyDetails";
+import UploadCompanyLogo from "./DesktopView/CreateWorkspace/UploadCompanyLogo";
+import WorkplaceLocations from "./DesktopView/CreateWorkspace/WorkplaceLocations";
+import WorkplacePasscodes from "./DesktopView/CreateWorkspace/WorkplacePasscode";
+import WorkspaceCreated from "./DesktopView/CreateWorkspace/WorkspaceCreated";
+import AdminProfilePage from "./admin-dashboard/components/AdminProfile";
+import JoinWorkplace from "./user-onboarding/JoinWithPasscode";
 function App() {
   if (typeof window === "undefined") {
     return null;
@@ -104,6 +113,17 @@ function App() {
       <Route path="/chat" element={<ChatSystem />} />
       <Route path="/my-reports" element={<MyReportsScreen />} />
       <Route path="/incident-report/:id" element={<IncidentReportDetailMobile />} />
+      <Route path="/admin-profile" element={<AdminProfilePage />} />
+
+      <Route path="/sign-up" element={<SignUpDesktop />} />
+      <Route path="/add-profile" element={<AddProfileDesktop />} />
+      <Route path="/create-join-workspace" element={<CreateJoinWorkspace />} />
+      <Route path="/create-workspace" element={<CompanyDetails />} />
+      <Route path="/upload-company-logo" element={<UploadCompanyLogo />} />
+      <Route path="/workplace-locations" element={<WorkplaceLocations />} />
+      <Route path="/workplace-passcodes" element={<WorkplacePasscodes />} />
+      <Route path="/workspace-created" element={<WorkspaceCreated />} />
+      <Route path="/join-with-passcode" element={<JoinWorkplace />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

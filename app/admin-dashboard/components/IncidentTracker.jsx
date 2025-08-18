@@ -34,6 +34,9 @@ import { useLocation } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 import NotifyAllEmployees from './NotifyEmployees';
 import { Listbox } from '@headlessui/react';
+import { signOut } from "firebase/auth";
+import { NavLink } from 'react-router-dom';
+
 
 
 export default function IncidentDetailView() {
@@ -47,8 +50,6 @@ export default function IncidentDetailView() {
   const [incidentData, setIncidentData] = useState(null);
   const [evidence, setEvidence] = useState([]);
   const [evidenceLoading, setEvidenceLoading] = useState(true);
-  const auth = getAuth();
-  const user = auth.currentUser;
   const navigate = useNavigate();
   const { incidentId } = useParams();
   const [reporterName, setReporterName] = useState(null);
@@ -65,11 +66,22 @@ const [message, setMessage] = useState('');
   const [notifyMessage, setNotifyMessage] = useState('');
   const [requestUserOptions, setRequestUserOptions] = useState([]);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
-
-
-
-
-
+  
+  
+  
+   const auth = getAuth();
+  
+   const user = auth.currentUser;
+  
+    const handleLogout = () => {
+      signOut(auth);
+      navigate('/login');
+    };
+  
+  
+  
+  
+    
   // Helper function to get the right icon for each incident type
 const getIncidentIcon = (type) => {
   switch(type) {
@@ -83,16 +95,16 @@ const getIncidentIcon = (type) => {
       return hazardIcon;
     default:
       return hazardIcon; // Default icon
-  }
-};
+    }
+  };
+  
+  // Helper to format image URL
+  const imgUrl = img => (img && (img.src || img.default)) || img || "";
 
-// Helper to format image URL
-const imgUrl = img => (img && (img.src || img.default)) || img || "";
-
-
-
+  
+  
   // --- helpers: write a notification doc ---
-async function sendNotification(recipientUid, payload = {}) {
+  async function sendNotification(recipientUid, payload = {}) {
   if (!recipientUid) return;
   await addDoc(collection(db, "notifications"), {
     userId: recipientUid,                   // who will see it
@@ -109,7 +121,7 @@ async function sendNotification(recipientUid, payload = {}) {
 }
 
 
-  const handleSendNotification = () => {
+const handleSendNotification = () => {
     console.log('Sending notification to all employees:', notifyMessage);
     // Add your notification logic here
   };
@@ -147,10 +159,10 @@ async function sendNotification(recipientUid, payload = {}) {
         lastUpdated: Timestamp.now(),
         infoRequests: arrayUnion(requestEntry)
       });
-  
+      
        // 2) Drop a notification (keep your broadcast in `notify/` untouched)
-    await addDoc(collection(db, 'notifications'), {
-      type: 'infoRequest',
+       await addDoc(collection(db, 'notifications'), {
+         type: 'infoRequest',
       company: companyName,
       incidentId,
       toUserId: selectedUser,
@@ -694,37 +706,109 @@ const involvedUserIds = [
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-54 bg-white shadow-md h-screen">
-          <div className="p-4">
-            <div className="flex items-center gap-3 mb-6">
-              {companyPhotoUrl ? (
-                <img 
-                  src={companyPhotoUrl} 
-                  alt={companyName}
-                  className="w-10 h-10 rounded object-cover"
-                />
-              ) : (
-                <div className="w-10 h-10 bg-yellow-500 rounded"></div>
-              )}
-              <span className="text-sm font-medium text-black">{companySiteLocation}</span>
-            </div>
-            <nav className="space-y-3">
-              <Link to="/admin-dashboard" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                <Home className="w-4 h-4" />
-                <span>Home</span>
-              </Link>
-              <Link to="/reports" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                <FileText className="w-4 h-4" />
-                <span>Incident Reports</span>
-              </Link>
-              <a href="/chats" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                <MessageSquare className="w-4 h-4" />
-                <span>Chats</span>
-              </a>
-              
-            </nav>
-          </div>
-        </aside>
+   <aside className="w-60 h-screen bg-white border-r">
+     <div className="h-full flex flex-col">
+       {/* Org header */}
+       <div className="px-4 pt-4 pb-3">
+         <div className="flex items-center gap-3">
+           {companyPhotoUrl ? (
+             <img
+               src={companyPhotoUrl}
+               alt={companyName || "Organization"}
+               className="w-9 h-9 rounded object-cover ring-1 ring-gray-200"
+             />
+           ) : (
+             <div className="w-9 h-9 rounded bg-gray-200 ring-1 ring-gray-200" />
+           )}
+           <div className="min-w-0">
+             <p className="text-[13px] font-semibold text-gray-900 truncate">
+               {companyName || "Smith Industries"}
+             </p>
+             <p className="text-[12px] text-gray-500 truncate">
+               {companySiteLocation || "Calgary"}
+             </p>
+           </div>
+         </div>
+       </div>
+   
+       {/* Nav */}
+       <nav className="px-2 py-2 space-y-1">
+         <NavLink
+           to="/admin-dashboard"
+           className={({ isActive }) =>
+             `flex items-center gap-3 rounded-md px-3 py-2 text-[13px]
+              ${isActive
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50 hover:text-blue-700"}`
+           }
+         >
+           <Home className="w-4 h-4" />
+           <span>Home</span>
+         </NavLink>
+   
+         <NavLink
+           to="/reports"
+           className={({ isActive }) =>
+             `flex items-center gap-3 rounded-md px-3 py-2 text-[13px]
+              ${isActive
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50 hover:text-blue-700"}`
+           }
+         >
+           <FileText className="w-4 h-4" />
+           <span>Incident Reports</span>
+         </NavLink>
+   
+         <NavLink
+           to="/chat"
+           className={({ isActive }) =>
+             `flex items-center gap-3 rounded-md px-3 py-2 text-[13px]
+              ${isActive
+                ? "bg-blue-50 text-blue-700"
+                : "text-gray-700 hover:bg-gray-50 hover:text-blue-700"}`
+           }
+         >
+           <MessageSquare className="w-4 h-4" />
+           <span>Chats</span>
+         </NavLink>
+       </nav>
+   
+       {/* Footer */}
+       <div className="mt-110 px-2 pb-3">
+         <button
+           onClick={handleLogout}
+           className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-[13px]
+                      text-gray-600 hover:bg-gray-50 hover:text-red-600 transition"
+         >
+           <svg
+             className="w-4 h-4"
+             viewBox="0 0 24 24"
+             fill="none"
+             stroke="currentColor"
+             strokeWidth="2"
+           >
+             <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+             <path d="M16 17l5-5-5-5" />
+             <path d="M21 12H9" />
+           </svg>
+           <span>Log Out</span>
+         </button>
+   
+         {/* Current user chip */}
+         <div className="mt-2 flex items-center gap-2 rounded-md bg-blue-50 px-2 py-2">
+           <img
+             src={companyPhotoUrl || "/assets/avatar.png"}
+             alt=""
+             className="w-5 h-5 rounded-full object-cover"
+           />
+           <span className="text-[12px] font-medium text-blue-900 truncate">
+             {adminName || "Megan Portello"}
+           </span>
+         </div>
+       </div>
+     </div>
+   </aside>
+   
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-9xl mx-auto px-4 py-6">
         {/* Breadcrumb */}
