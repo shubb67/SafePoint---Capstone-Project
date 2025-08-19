@@ -4,6 +4,10 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
+import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/_utils/firebase";
+import { query, where } from "firebase/firestore";
+
 
 export default function PropertyPersonalInfo() {
   const navigate = useNavigate();
@@ -20,13 +24,16 @@ export default function PropertyPersonalInfo() {
   useEffect(() => {
     (async () => {
       try {
-        const snap = await getDocs(collection(db, "users"));
+        const wsId = (await getDoc(doc(db, "users", auth.currentUser.uid))).data().workspaceId;
+        const snap = await getDocs(query(collection(db, "users"), where("workspaceId", "==", wsId)));
         setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));
+
       } catch (err) {
         console.error("Error fetching users:", err);
       }
     })();
   }, []);
+
 
   const handleBack = () => navigate(-1);
 

@@ -9,6 +9,7 @@ import { collection, addDoc, serverTimestamp, updateDoc } from "firebase/firesto
 import { getDoc, doc } from "firebase/firestore";
 
 
+
 export default function ReportSubmitted() {
   const navigate = useNavigate();
   const incident = useIncidentState();
@@ -18,58 +19,80 @@ export default function ReportSubmitted() {
   const [error, setError]     = useState("");
    const { reportId } = useIncidentState();
 
+
   const didSubmitRef = useRef(false);
 
-  // on mount: write a new report doc
+
+  
   useEffect(() => {
     if (didSubmitRef.current) return;
-      didSubmitRef.current = true;
-
+    didSubmitRef.current = true;
+  
     async function submitReport() {
       try {
         const user = auth.currentUser;
         if (!user) throw new Error("Not authenticated");
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        const userData = userSnap.data();
-        const orgId = userSnap.data()?.organizationId || null;
+  
+        // Get user data (to find workspace + display name, etc.)
+        const userSnap  = await getDoc(doc(db, "users", user.uid));
+        const userData  = userSnap.data() || {};
+        const workspaceId = userData.workspaceId || null;   // <— use workspace
+        const displayFirst = userData.firstName || "You";
+  
+        // Create report (store workspaceId instead of organizationId)
         const reportRef = await addDoc(collection(db, "reports"), {
-          reportId:       null, // will be set after doc creation
-          userId:         user.uid,
-          organizationId: orgId,
+          reportId:     null,               // set after creation
+          userId:       user.uid,
+          workspaceId,                      // <— important change
           ...incident,
-          createdAt: serverTimestamp(),
+          createdAt:    serverTimestamp(),
         });
-       await updateDoc(reportRef, { reportId: reportRef.id });
-        // now store it in context:
-        dispatch({ type: "SET_REPORT_ID", payload: reportRef.id  });
-        // create a notification for the reporter (you)
-        const incidentType = incident?.incidentType || "incident";
+  
+        await updateDoc(reportRef, { reportId: reportRef.id });
+  
+        // Save in context
+        dispatch({ type: "SET_REPORT_ID", payload: reportRef.id });
+  
+        // Build a friendly message
+        const incidentType =
+          incident?.incidentType || "incident";
         const location =
           incident?.incidentDetails?.location ||
           incident?.incidentDetails?.locationId ||
           "Unknown Location";
-
+  
+        // Notification (new schema + legacy keys for compatibility)
         await addDoc(collection(db, "notifications"), {
-          toUserId: user.uid,                    // recipient
-          fromUserId: user.uid,                  // who triggered it
-          fromUserName: userData.firstName || "You",
-          company: userData.company || null,
-          incidentId: reportRef.id,              // link target
-          type: "report",                        // used by NotificationCenter
-          title: "Your Incident Report Was Submitted",
-          message: `Your ${incidentType} report from ${location} has been successfully submitted.`,
-          status: "unread",
-          createdAt: serverTimestamp(),
+          // — New schema your dashboard listens to —
+          recipientId: user.uid,
+          kind:        "report_submitted",
+          title:       "Your Incident Report Was Submitted",
+          message:     `Your ${incidentType} report from ${location} has been successfully submitted.`,
+          reportId:    reportRef.id,
+          workspaceId,
+          read:        false,
+          createdAt:   serverTimestamp(),
+  
+          // — Legacy fields (kept so old UIs still show it) —
+          toUserId:    user.uid,
+          fromUserId:  user.uid,
+          fromUserName: displayFirst,
+          company:     userData.company || null,
+          type:        "report",
+          status:      "unread",
         });
+  
         setLoading(false);
       } catch (e) {
         console.error("Submit error:", e);
-        setError(e.message);
+        setError(e.message || "Failed to submit report.");
         setLoading(false);
       }
     }
+  
     submitReport();
   }, []);
+  
 
   useEffect(() => {
     const audio = new Audio("/assets/sounds/success.mp3");

@@ -28,34 +28,34 @@ export default function Login() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
-
+  
     const emailTrim = email.trim();
     const passwordTrim = password.trim();
-
+  
     if (!emailTrim || !passwordTrim) {
       setError("Please enter both email and password.");
       return;
     }
-
+  
     setLoading(true);
     try {
       // 1) Sign in with Firebase Auth using email and password
       const userCredential = await signInWithEmailAndPassword(auth, emailTrim, passwordTrim);
       const userId = userCredential.user.uid;
-
+  
       // 2) Get user document to find their workspaces
       const userRef = doc(db, "users", userId);
       const userDoc = await getDoc(userRef);
-
+  
       if (!userDoc.exists()) {
         setError("User profile not found. Please contact your administrator.");
         setLoading(false);
         await auth.signOut();
         return;
       }
-
+  
       const userData = userDoc.data();
-
+  
       // 3) Find all workspaces where this user is a member
       const workspacesRef = collection(db, "workspaces");
       const allWorkspacesSnap = await getDocs(workspacesRef);
@@ -63,24 +63,30 @@ export default function Login() {
       let userWorkspaces = [];
       let primaryWorkspace = null;
       let userRole = "employee"; // default role
-
-      // Check each workspace to see if user is in members array
+  
+      // Check each workspace to see if user is in members object
       for (const wsDoc of allWorkspacesSnap.docs) {
         const wsData = wsDoc.data();
-        const members = wsData.members || [];
+        const members = wsData.members || {};
         
-        // Check if user is a member of this workspace
-        if (members.includes(userId)) {
+        // Check if user is a member of this workspace (members is an object)
+        if (members[userId]) {
           const workspace = { id: wsDoc.id, ...wsData };
           userWorkspaces.push(workspace);
           
+          // Get user's role from the workspace members object
+          const memberData = members[userId];
+          if (memberData && memberData.role) {
+            userRole = memberData.role;
+          }
+          
           // Check if this is the user's current workspace
-          if (userData.currentWorkspace === wsDoc.id) {
+          if (userData.workspaceId === wsDoc.id || userData.currentWorkspace === wsDoc.id) {
             primaryWorkspace = workspace;
           }
         }
       }
-
+  
       // If no workspaces found, check if user is trying to join one
       if (userWorkspaces.length === 0) {
         setError("You are not a member of any workspace. Please ask your admin to add you or use a join code.");
@@ -88,50 +94,36 @@ export default function Login() {
         await auth.signOut();
         return;
       }
-
+  
       // 4) If no primary workspace set, use the first one
       if (!primaryWorkspace) {
         primaryWorkspace = userWorkspaces[0];
-      }
-
-      // 5) Get user's role in the workspace
-      // Check workspace_members subcollection for detailed info
-      const memberRef = doc(db, "workspace_members", primaryWorkspace.id, "members", userId);
-      const memberDoc = await getDoc(memberRef);
-      
-      if (memberDoc.exists()) {
-        const memberData = memberDoc.data();
-        userRole = memberData.role || "employee";
-        
-        // Update last active
-        await updateDoc(memberRef, {
-          lastActiveAt: serverTimestamp()
-        });
-      } else {
-        // If no member document, check user's workspaces array for role
-        if (userData.workspaces && Array.isArray(userData.workspaces)) {
-          const wsInfo = userData.workspaces.find(ws => ws.workspaceId === primaryWorkspace.id);
-          if (wsInfo) {
-            userRole = wsInfo.role || "employee";
-          }
-        }
-        
-        // Check if user is the owner
-        if (primaryWorkspace.ownerId === userId) {
-          userRole = "owner";
-        } else if (primaryWorkspace.adminIds && primaryWorkspace.adminIds.includes(userId)) {
-          userRole = "admin";
+        // Get role from the primary workspace
+        const members = primaryWorkspace.members || {};
+        if (members[userId] && members[userId].role) {
+          userRole = members[userId].role;
         }
       }
-
+  
+      // 5) Check if user is the owner (override role if they're the owner)
+      if (primaryWorkspace.ownerId === userId) {
+        userRole = "owner";
+      }
+  
       // 6) Update user's last login and current workspace
       await updateDoc(userRef, {
         lastLoginAt: serverTimestamp(),
         currentWorkspace: primaryWorkspace.id,
         isActive: true
       });
-
-      // 7) Store session data
+  
+      // 7) Update member's last active time in workspace
+      const workspaceRef = doc(db, "workspaces", primaryWorkspace.id);
+      await updateDoc(workspaceRef, {
+        [`members.${userId}.lastActiveAt`]: serverTimestamp()
+      });
+  
+      // 8) Store session data
       localStorage.setItem("currentWorkspaceSetup", primaryWorkspace.id);
       localStorage.setItem("userRole", userRole);
       localStorage.setItem("userId", userId);
@@ -139,11 +131,11 @@ export default function Login() {
       // Store list of workspaces if user has multiple
       if (userWorkspaces.length > 1) {
         localStorage.setItem("availableWorkspaces", JSON.stringify(
-          userWorkspaces.map(ws => ({ id: ws.id, name: ws.companyName }))
+          userWorkspaces.map(ws => ({ id: ws.id, name: ws.companyName || ws.name }))
         ));
       }
-
-      // 8) Route based on role
+  
+      // 9) Route based on role
       const roleType = userRole.toLowerCase();
       
       if (roleType === "owner" || roleType === "admin") {
@@ -154,7 +146,7 @@ export default function Login() {
         // Guest or viewer roles
         navigate("/guest-dashboard");
       }
-
+  
     } catch (err) {
       console.error("Login error:", err);
       
@@ -291,26 +283,7 @@ export default function Login() {
               </Link>
             </div>
             
-            <div className="text-center">
-              <p className="text-sm text-gray-600">
-              Don&apos;t have an account?{' '}
-                <Link
-                  to="/register"
-                  className="font-semibold text-[#1E63FF] hover:underline"
-                >
-                  Sign up
-                </Link>
-              </p>
-            </div>
-
-            <div className="relative my-6">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300"></div>
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">OR</span>
-              </div>
-            </div>
+           
 
             <div className="text-center">
               <p className="text-sm text-gray-600">
@@ -334,24 +307,24 @@ export default function Login() {
 function ShieldMark() {
   return (
     <div className="inline-block relative">
-      <svg className="w-[74px] h-[84px] drop-shadow-[0_6px_14px_rgba(0,0,0,.18)]" viewBox="0 0 70 78" fill="none" aria-hidden>
-        <defs>
-          <linearGradient id="spg" x1="0" y1="0" x2="70" y2="78">
-            <stop offset="0" stopColor="#2F5BFF" />
-            <stop offset="1" stopColor="#1B2A63" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M35 2c9.8 6 19.6 6 29.4 0 1.1-.7 2.6.1 2.6 1.5V41c0 12.4-8.6 23.7-20.6 28.2L35 75l-11.4-5.8C11.6 64.7 3 53.4 3 41V3.5C3 2.1 4.5 1.3 5.6 2 15.4 8 25.2 8 35 2Z"
-          fill="url(#spg)"
-        />
-      </svg>
+      <div className="relative drop-shadow-[0_10px_20px_rgba(0,0,0,.25)]">
+      
+      <img src="/assets/images/safepointlogo.png" alt="" className="w-[160px] h-[160px]" />
+               
+          </div>
       <div className="absolute inset-0 flex items-center justify-center">
-        <span className="text-white font-black text-[28px] leading-none tracking-tight">SP</span>
+   </div>
       </div>
-      <div className="absolute -right-1 -bottom-1 w-5 h-5 rounded-full bg-white flex items-center justify-center">
-        <span className="text-[#1B2A63] text-[14px] font-black leading-none">+</span>
-      </div>
+    
+  );
+}
+
+function ShieldSPLarge() {
+  return (
+    <div className="relative drop-shadow-[0_10px_20px_rgba(0,0,0,.25)]">
+      
+<img src="/assets/images/safepointlogo.png" alt="" className="w-[160px] h-[160px]" />
+         
     </div>
   );
 }

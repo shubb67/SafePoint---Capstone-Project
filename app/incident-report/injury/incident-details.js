@@ -6,6 +6,9 @@ import { MapPin, X } from "lucide-react";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import VoiceRecorderModal from "../../components/VoiceRecorderModal";
 import { Trash2, Volume2 } from "lucide-react";
+import { getDoc, doc } from "firebase/firestore";
+import { auth, db } from "@/_utils/firebase";
+
 
 export default function NearMissIncidentDetails() {
   const navigate = useNavigate();
@@ -41,6 +44,52 @@ export default function NearMissIncidentDetails() {
   const [modalOpen, setModalOpen] = useState(false);
   const [audioName, setAudioName] = useState("");
   const [showRecorder, setShowRecorder] = useState(true);
+  const [locations, setLocations] = useState([]); // from workspace
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
+
+  // Fetch workspace locations for current user
+  useEffect(() => {
+    (async () => {
+      try {
+        const user = auth.currentUser;
+        if (!user) return;
+
+        const userSnap = await getDoc(doc(db, "users", user.uid));
+        const wsId = userSnap.data()?.workspaceId;
+        if (!wsId) return;
+
+        const wsSnap = await getDoc(doc(db, "workspaces", wsId));
+        if (wsSnap.exists()) {
+          const locs = wsSnap.data()?.locations ?? [];
+          setLocations(locs);
+        }
+      } catch (err) {
+        console.error("Failed to load locations:", err);
+      }
+    })();
+  }, []);
+
+  const handleInputChange = (e) => {
+    setLocationInput(e.target.value);
+    setShowDropdown(true);
+  };
+
+  const handleClear = () => {
+    setLocationInput("");
+    setShowDropdown(false);
+    onSelect?.(null);
+  };
+
+  const handleSelect = (loc) => {
+    setLocationInput(loc.name);
+    setShowDropdown(false);
+    onSelect?.(loc);
+  };
+
+ 
 
   // animated dots during processing
   const useDotAnimation = () => {
@@ -335,83 +384,64 @@ export default function NearMissIncidentDetails() {
 
           {/* location with manual input (Google Places disabled) */}
           <div className="relative">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Location
-            </label>
-            <div className="relative">
-              <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <MapPin className="h-4 w-4 text-gray-400" />
-              </div>
-              <input
-                ref={locationInputRef}
-                type="text"
-                value={locationInput}
-                onChange={handleLocationInputChange}
-                onKeyDown={handleKeyDown}
-                onFocus={handleLocationFocus}
-                placeholder="Enter location address..."
-                required={!location}
-                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg
-                           focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
-                autoComplete="off"
-              />
-              {locationInput && (
-                <button
-                  type="button"
-                  onClick={handleClearLocation}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                >
-                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-                </button>
-              )}
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        Location
+      </label>
+
+      <div className="relative">
+        <input
+          ref={inputRef}
+          type="text"
+          value={locationInput}
+          onChange={handleInputChange}
+          onKeyDown={handleKeyDown}
+          onFocus={() => setShowDropdown(true)}
+          placeholder="Select workspace location..."
+          required
+          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg
+                     focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
+          autoComplete="off"
+        />
+
+        {locationInput && (
+          <button
+            type="button"
+            onClick={handleClear}
+            className="absolute inset-y-0 right-0 flex items-center pr-3"
+          >
+            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+          </button>
+        )}
+      </div>
+
+      {showDropdown && (
+        <div
+          ref={dropdownRef}
+          className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-auto"
+        >
+          {locations.length === 0 && (
+            <div className="px-4 py-3 text-gray-500 text-sm">
+              No locations available
             </div>
-
-            {/* Google Places suggestions dropdown (only shows when enabled) */}
-            {ENABLE_GOOGLE_PLACES && showSuggestions && (
+          )}
+          {locations.map((loc, idx) => {
+            const isHighlighted = idx === selectedIndex;
+            return (
               <div
-                ref={suggestionsRef}
-                className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-auto"
+                key={loc.locationId}
+                onClick={() => handleSelect(loc)}
+                className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${
+                  isHighlighted ? "bg-[#192C63]/10" : "hover:bg-gray-50"
+                }`}
               >
-                {isLoadingSuggestions && (
-                  <div className="px-4 py-3 text-gray-500 text-sm">
-                    Searching...
-                  </div>
-                )}
-                {!isLoadingSuggestions && suggestions.map((place, index) => {
-                  const isHighlighted = index === selectedIndex;
-                  const mainText = place.structured_formatting.main_text;
-                  const secondaryText = place.structured_formatting.secondary_text;
-
-                  return (
-                    <div
-                      key={place.place_id}
-                      onClick={() => handleLocationSelect(place)}
-                      className={`px-4 py-3 cursor-pointer flex items-start gap-3 transition-colors ${
-                        isHighlighted ? "bg-[#192C63]/10" : "hover:bg-gray-50"
-                      }`}
-                    >
-                      <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
-                      <div className="flex-1">
-                        <div className="text-black font-medium">
-                          {highlightMatch(mainText, locationInput)}
-                        </div>
-                        {secondaryText && (
-                          <div className="text-sm text-gray-500">
-                            {secondaryText}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-                {!isLoadingSuggestions && suggestions.length === 0 && locationInput.trim() && (
-                  <div className="px-4 py-3 text-gray-500 text-sm">
-                    No locations found
-                  </div>
-                )}
+                <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
+                <div className="flex-1 text-black font-medium">{loc.name}</div>
               </div>
-            )}
-          </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
 
           {!audioUrl && (
             <>
@@ -467,7 +497,7 @@ export default function NearMissIncidentDetails() {
 
           <button
             type="submit"
-            className="w-full py-3 bg-[#192C63] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
+            className="w-full py-3 bg-[#3B82F6] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
           >
             Next
           </button>

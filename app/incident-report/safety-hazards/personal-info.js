@@ -3,10 +3,11 @@ import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
-import { getAuth } from "firebase/auth";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { Listbox } from '@headlessui/react';
 import { ChevronDown } from 'lucide-react';
+import { doc, getDoc } from "firebase/firestore";
+import { auth } from "@/_utils/firebase";
 
 export default function SafetyHazardPersonalInfo() {
   const navigate = useNavigate();
@@ -21,32 +22,19 @@ export default function SafetyHazardPersonalInfo() {
   const [users, setUsers]         = useState([]);
   const [companyName, setCompanyName] = useState("");
   const [loadingUsers, setLoadingUsers] = useState(false);
+
   
 
-  // Get current user's company name on mount
-  useEffect(() => {
-    const fetchCompany = async () => {
-      const auth = getAuth();
-      const user = auth.currentUser;
-      if (!user) return;
-      const q = query(collection(db, "users"), where("__name__", "==", user.uid));
-      const snap = await getDocs(q);
-      const u = snap.docs[0]?.data();
-      setCompanyName(u?.company || "");
-    };
-    fetchCompany();
-  }, []);
 
   // load users for dropdowns, after companyName is set
   useEffect(() => {
     async function fetchRequestUsers() {
-      if (!companyName) return;
       setLoadingUsers(true);
       try {
-        const usersSnap = await getDocs(query(
-          collection(db, "users"),
-          where("company", "==", companyName)
-        ));
+        const wsId = (await getDoc(doc(db, "users", auth.currentUser.uid))).data().workspaceId;
+          const snap = await getDocs(query(collection(db, "users"), where("workspaceId", "==", wsId)));
+          setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));     
+        
         const usersArr = usersSnap.docs.map(doc => {
           const d = doc.data();
           return {
@@ -141,8 +129,8 @@ export default function SafetyHazardPersonalInfo() {
                         return u ? (
                           <>
                             {u.photoUrl
-                              ? <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
-                              : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
+                              ? <img src={u.photoUrl} alt="" className="w-10 h-10 rounded-full mr-2" />
+                              : <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
                             }
                             <span className=" block truncate text-black">{u.firstName} {u.lastName}</span>
                           </>
@@ -171,8 +159,8 @@ export default function SafetyHazardPersonalInfo() {
                         <>
                           <span className={`absolute left-2 top-2 flex items-center`}>
                             {u.photoUrl
-                              ? <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
-                              : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
+                              ? <img src={u.photoUrl} alt="" className="w-9 h-9 rounded-full mr-2" />
+                              : <div className="w-8 h-8 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">{u.firstName?.charAt(0) || "?"}</div>
                             }
                           </span>
                           <span className={`ml-4 block truncate ${selected ? 'font-medium' : 'font-normal'}`}>

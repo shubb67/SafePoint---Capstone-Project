@@ -7,7 +7,6 @@ import WelcomeScreen       from "./WelcomeScreen";
 import CreateAccount       from "./user-onboarding/CreateAccount";
 import IncidentLayout      from "./incident-report/IncidentLayout";
 import Login              from "./user-onboarding/login";
-import CompanyInformation from "./user-onboarding/company-info";
 import UploadPhoto        from "./user-onboarding/upload-photo";
 import UserOnboared     from "./user-onboarding/user-onboared";
 
@@ -70,7 +69,6 @@ function App() {
         {/* Public / Onboarding */}
         <Route path="/" element={<WelcomeScreen />} />
         <Route path="/create-account" element={<CreateAccount />} />
-        <Route path="/company-information" element={<CompanyInformation />} />
         <Route path="/upload-photo" element={<UploadPhoto />} />
         <Route path="/user-onboarded" element={<UserOnboared />} />
         <Route path="/login" element={<Login />} />

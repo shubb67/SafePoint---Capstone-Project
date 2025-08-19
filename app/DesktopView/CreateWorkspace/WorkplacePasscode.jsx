@@ -62,13 +62,13 @@ export default function WorkplacePasscodes() {
   }, [navigate]);
 
   const generatePasscode = () => {
-    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    const digits = '0123456789'; 
     let passcode = '';
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 6; i++) {
       if (i === 3) {
-        passcode += ' '; // Add space in middle for readability
+        passcode += ' '; // add space after 3rd digit
       }
-      passcode += chars.charAt(Math.floor(Math.random() * chars.length));
+      passcode += digits.charAt(Math.floor(Math.random() * digits.length));
     }
     return passcode;
   };

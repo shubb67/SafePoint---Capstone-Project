@@ -7,6 +7,8 @@ import { auth, db } from "@/_utils/firebase";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { Listbox } from "@headlessui/react";
 import { ChevronDown } from "lucide-react";
+import { doc, getDoc } from "firebase/firestore";
+import { query, where } from "firebase/firestore";
 
 export default function PersonalInfo() {
   const navigate = useNavigate();
@@ -19,19 +21,27 @@ export default function PersonalInfo() {
   const [wasInjured, setWasInjured] = useState("");
   const [injuredPersons, setInjuredPersons] = useState("");
   const [witnesses, setWitnesses] = useState("");
+  const [users, setUsers] = useState([]);
+  const [loadingUsers, setLoadingUsers] = useState(false);
+
 
   // Load users for dropdowns
-  const [users, setUsers] = useState([]);
-  useEffect(() => {
-    (async () => {
-      try {
-        const snap = await getDocs(collection(db, "users"));
-        setUsers(snap.docs.map(doc => ({ uid: doc.id, ...doc.data() })));
-      } catch (err) {
-        console.error("Error fetching users:", err);
+    useEffect(() => {
+      async function fetchRequestUsers() {
+        setLoadingUsers(true);
+        try {
+          const wsId = (await getDoc(doc(db, "users", auth.currentUser.uid))).data().workspaceId;
+            const snap = await getDocs(query(collection(db, "users"), where("workspaceId", "==", wsId)));
+            setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));     
+          
+        } catch (err) {
+          console.error("Error fetching users for dropdown", err);
+        } finally {
+          setLoadingUsers(false);
+        }
       }
-    })();
-  }, []);
+      fetchRequestUsers();
+    }, []);
 
   const handleBack = () => navigate(-1);
   const handleNext = e => {
@@ -184,7 +194,7 @@ export default function PersonalInfo() {
                   className={
                     "flex-1 py-2 border rounded-lg text-center font-medium transition " +
                     (wasInjured === val
-                      ? "bg-[#192C63] text-white border-[#192C63]"
+                      ? "bg-[#3B82F6] text-white border-[#3B82F6]"
                       : "bg-white text-gray-700 border-gray-300 hover:shadow-sm")
                   }
                 >
@@ -294,7 +304,7 @@ export default function PersonalInfo() {
               className={
                 "w-full py-3 rounded-lg text-white font-medium transition " +
                 (canProceed
-                  ? "bg-[#192C63] hover:bg-[#162050]"
+                  ? "bg-[#3B82F6] hover:bg-[#162050]"
                   : "bg-gray-400 cursor-not-allowed")
               }
             >

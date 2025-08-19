@@ -27,7 +27,7 @@ export default function SignUpLanding() {
             alt=""
             className="block w-full h-full object-cover object-bottom select-none"
             draggable="false"
-            style={{ maxHeight: '40vh' }}
+            style={{ maxHeight: '50vh' }}
           />
 
           {/* Exact gradient: linear-gradient(180deg, rgba(255,255,255,0) 0%, #FFF 83.16%) */}
@@ -92,31 +92,9 @@ export default function SignUpLanding() {
 function ShieldSPLarge() {
   return (
     <div className="relative drop-shadow-[0_10px_20px_rgba(0,0,0,.25)]">
-      <svg
-        className="w-[120px] h-[132px]"
-        viewBox="0 0 70 78"
-        fill="none"
-        aria-hidden
-      >
-        <defs>
-          <linearGradient id="spg" x1="0" y1="0" x2="70" y2="78">
-            <stop offset="0" stopColor="#2F5BFF" />
-            <stop offset="1" stopColor="#1631B2" />
-          </linearGradient>
-        </defs>
-        <path
-          d="M35 2c9.8 6 19.6 6 29.4 0 1.1-.7 2.6.1 2.6 1.5V41c0 12.4-8.6 23.7-20.6 28.2L35 75l-11.4-5.8C11.6 64.7 3 53.4 3 41V3.5C3 2.1 4.5 1.3 5.6 2 15.4 8 25.2 8 35 2Z"
-          fill="url(#spg)"
-        />
-      </svg>
-      <div className="absolute inset-0 flex items-center justify-center">
-        <div className="leading-none text-white font-extrabold -mt-[4px]">
-          <span className="text-[40px]">SP</span>
-          <span className="ml-2 inline-flex items-center justify-center w-7 h-7 rounded-full bg-white">
-            <span className="text-[#1b2a63] text-[18px] font-black">+</span>
-          </span>
-        </div>
-      </div>
+      
+<img src="/assets/images/safepointlogo.png" alt="" className="w-[160px] h-[160px]" />
+         
     </div>
   );
 }

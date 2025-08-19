@@ -19,58 +19,69 @@ export default function ReportSubmitted() {
 
   const didSubmitRef = useRef(false);
 
-  // on mount: write a new report doc
-  useEffect(() => {
-    if (didSubmitRef.current) return;
-      didSubmitRef.current = true;
+// on mount: write a new report doc (workspace-based)
+useEffect(() => {
+  if (didSubmitRef.current) return;
+  didSubmitRef.current = true;
 
-    async function submitReport() {
-      try {
-        const user = auth.currentUser;
-        if (!user) throw new Error("Not authenticated");
+  async function submitReport() {
+    try {
+      const user = auth.currentUser;
+      if (!user) throw new Error("Not authenticated");
 
-        const userSnap = await getDoc(doc(db, "users", user.uid));
-        const userData = userSnap.data();
-        const orgId = userSnap.data()?.organizationId || null;
+      // get the reporter's user record (to read workspaceId, name, etc.)
+      const userSnap  = await getDoc(doc(db, "users", user.uid));
+      const userData  = userSnap.data() || {};
+      const workspaceId = userData.workspaceId || null; // ← workspace, not org
+      // (optional) if you store a workspace name on the user record
+      const workspaceName = userData.workspaceName || null;
 
-        const reportRef = await addDoc(collection(db, "reports"), {
-          reportId:       null, // will be set after doc creation
-          userId:         user.uid,
-          organizationId: orgId,
-          ...incident,
-          createdAt: serverTimestamp(),
-        });
-        await updateDoc(reportRef, { reportId: reportRef.id });
-        // now store it in context:
-        dispatch({ type: "SET_REPORT_ID", payload: reportRef.id  });
-        // create a notification for the reporter (you)
-        const incidentType = incident?.incidentType || "incident";
-        const location =
-          incident?.incidentDetails?.location ||
-          incident?.incidentDetails?.locationId ||
-          "Unknown Location";
+      // create the report
+      const reportRef = await addDoc(collection(db, "reports"), {
+        reportId:     null,      // will be set to doc id right after create
+        userId:       user.uid,
+        workspaceId,             // ← store workspaceId here
+        ...incident,             // your incident context
+        createdAt:   serverTimestamp(),
+      });
 
-        await addDoc(collection(db, "notifications"), {
-          toUserId: user.uid,                    // recipient
-          fromUserId: user.uid,                  // who triggered it
-          fromUserName: userData.firstName || "You",
-          company: userData.company || null,
-          incidentId: reportRef.id,              // link target
-          type: "report",                        // used by NotificationCenter
-          title: "Your Incident Report Was Submitted",
-          message: `Your ${incidentType} report from ${location} has been successfully submitted.`,
-          status: "unread",
-          createdAt: serverTimestamp(),
-        });
-        setLoading(false);
-      } catch (e) {
-        console.error("Submit error:", e);
-        setError(e.message);
-        setLoading(false);
-      }
+      // store the generated id back into the report + context
+      await updateDoc(reportRef, { reportId: reportRef.id });
+      dispatch({ type: "SET_REPORT_ID", payload: reportRef.id });
+
+      // build a friendly message
+      const incidentType =
+        incident?.incidentType?.toLowerCase?.() || "incident";
+      const location =
+        incident?.incidentDetails?.location ||
+        incident?.incidentDetails?.locationId ||
+        "Unknown Location";
+
+      // create a notification for the reporter (you)
+      await addDoc(collection(db, "notifications"), {
+        toUserId:      user.uid,                           // recipient
+        fromUserId:    user.uid,                           // actor
+        fromUserName:  userData.firstName || "You",
+        workspaceId,                                       // keep context
+        workspaceName: workspaceName || null,              // optional field
+        incidentId:    reportRef.id,                       // link target
+        type:          "report",                           // used by UI
+        title:         "Your Incident Report Was Submitted",
+        message:       `Your ${incidentType} report from ${location} has been successfully submitted.`,
+        status:        "unread",                           // your NotificationCenter filter
+        createdAt:     serverTimestamp(),
+      });
+
+      setLoading(false);
+    } catch (e) {
+      console.error("Submit error:", e);
+      setError(e.message);
+      setLoading(false);
     }
-    submitReport();
-  }, []);
+  }
+
+  submitReport();
+}, []);
 
   useEffect(() => {
     const audio = new Audio("/assets/sounds/success.mp3");

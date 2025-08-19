@@ -19,17 +19,16 @@ import { db } from "@/_utils/firebase";
 import { ChevronLeft, HelpCircle } from "lucide-react";
 
 export default function JoinWorkplace() {
-  const nav = useNavigate();
-  const auth = getAuth();
+  const navigate = useNavigate();
 
   const [pin, setPin] = useState("");                 // raw (no space), max 6
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState("");
   const [inputMode, setInputMode] = useState("default"); // "default" | "keyboard" | "custom"
-  const [keyboardMode, setKeyboardMode] = useState("numeric"); // future toggle if you add alpha keypad
+  const [keyboardMode, setKeyboardMode] = useState("numeric");
   const inputRef = useRef(null);
 
-  // format "ABC 123"
+  // "ABC 123" presentation
   const prettyPin = useMemo(() => {
     const clean = pin.slice(0, 6);
     return clean.replace(/^(.{0,3})(.{0,3}).*$/, (_, a, b) =>
@@ -38,7 +37,6 @@ export default function JoinWorkplace() {
   }, [pin]);
 
   const handlePinInput = (val) => {
-    // allow [A-Z0-9], auto uppercase, clamp 6
     const clean = val.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().slice(0, 6);
     setPin(clean);
     setError("");
@@ -46,21 +44,29 @@ export default function JoinWorkplace() {
 
   const disabled = pin.length !== 6 || checking;
 
+  /**
+   * Try to find a workspace that contains this pass code.
+   * First with a helper array field "passCodesCodes" (if you maintain it),
+   * otherwise scan a small batch and check passCodes array.
+   */
   async function findWorkspaceByCode(code) {
-    // Fast path (if you maintain a helper array field of codes)
-    const fastQ = query(
-      collection(db, "workspaces"),
-      where("passCodesCodes", "array-contains", code),
-      limit(1)
-    );
-    const fastSnap = await getDocs(fastQ);
-    if (!fastSnap.empty) {
-      const d = fastSnap.docs[0];
-      return { id: d.id, data: d.data() };
+    // fast path (optional helper field)
+    try {
+      const fastQ = query(
+        collection(db, "workspaces"),
+        where("passCodesCodes", "array-contains", code),
+        limit(1)
+      );
+      const fastSnap = await getDocs(fastQ);
+      if (!fastSnap.empty) {
+        const d = fastSnap.docs[0];
+        return { id: d.id, data: d.data() };
+      }
+    } catch (_) {
+      // ignore and fall back to scan
     }
 
-    // Fallback: scan a small batch (adjust limit to your size/shape)
-    // You can add another orderBy if you keep updatedAt, etc.
+    // fallback: small scan
     const scanSnap = await getDocs(query(collection(db, "workspaces"), limit(50)));
     for (const d of scanSnap.docs) {
       const data = d.data();
@@ -72,6 +78,7 @@ export default function JoinWorkplace() {
     return null;
   }
 
+  // Validate the employee pass entry using your structure
   function validatePassEntry(entry) {
     if (!entry) return "Invalid code.";
     if ((entry.type || "").toLowerCase() !== "employee") {
@@ -98,58 +105,46 @@ export default function JoinWorkplace() {
       setChecking(true);
       setError("");
 
-      // 1) Locate a workspace that contains this code
+      // 1) Locate workspace
       const ws = await findWorkspaceByCode(code);
       if (!ws) {
         setError("We couldn’t find a workplace with that pass code.");
         return;
       }
-
       const { id: workspaceId, data } = ws;
-      const passCodes = Array.isArray(data.passCodes) ? data.passCodes : [];
-      const idx = passCodes.findIndex((p) => (p?.code || "").toUpperCase() === code);
-      const pass = idx >= 0 ? passCodes[idx] : null;
 
-      // 2) Validate against your rules (employee-only, active, limit, etc.)
+      // 2) Find the matching pass entry
+      const passCodes = Array.isArray(data.passCodes) ? data.passCodes : [];
+      const pass = passCodes.find((p) => (p?.code || "").toUpperCase() === code);
+
+      // 3) Validate (employee only + active + limits)
       const vErr = validatePassEntry(pass);
       if (vErr) {
         setError(vErr);
         return;
       }
 
-      const user = auth.currentUser;
-      if (!user) {
-        setError("You need to be signed in first.");
-        return;
-      }
+      // 4) No auth writes here — this is pre-signup.
+      //    Just carry context forward to Create Account.
+      //    (You’ll attach user->workspace and increment usedCount after account creation.)
+      const ctx = {
+        joinMode: "employee",
+        workspaceId,
+        workspaceName: data.name || data.title || "Workspace",
+        passCode: code,
+        passPermissions: Array.isArray(pass.permissions) ? pass.permissions : [],
+        organizationId: data.organizationId || null,
+      };
 
-      // 3) Add/merge minimal membership on the user doc
-      await setDoc(
-        doc(db, "users", user.uid),
-        {
-          workspaceId,
-          organizationId: data.organizationId || null, // if you keep both
-          role: "employee",
-          permissions: Array.isArray(pass.permissions) ? pass.permissions : ["create_incident", "view_own_incidents"],
-          joinedAt: serverTimestamp(),
-        },
-        { merge: true }
-      );
+      // Optional: put a tiny backup in sessionStorage in case of a refresh
+      try {
+        sessionStorage.setItem("signupWorkspaceCtx", JSON.stringify(ctx));
+      } catch {}
 
-      // 4) Increment usedCount for this code (read-modify-write on array element)
-      const updated = [...passCodes];
-      const currentUsed = typeof pass.usedCount === "number" ? pass.usedCount : 0;
-      updated[idx] = { ...pass, usedCount: currentUsed + 1 };
-
-      await updateDoc(doc(db, "workspaces", workspaceId), {
-        passCodes: updated,
-      });
-
-      // 5) All set — go to the employee dashboard (or next onboarding step)
-      nav("/user-dashboard");
-    } catch (err) {
-      console.error(err);
-      setError("Something went wrong while joining. Please try again.");
+      navigate("/create-account", { state: ctx, replace: true });
+    } catch (e) {
+      console.error(e);
+      setError("Couldn’t verify the code. Please try again.");
     } finally {
       setChecking(false);
     }
