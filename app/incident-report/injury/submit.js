@@ -56,10 +56,14 @@ export default function ReportSubmitted() {
         // Build a friendly message
         const incidentType =
           incident?.incidentType || "incident";
+          const locIdOrText = String(data?.incidentDetails?.location ?? "").trim();
+          const locReadable  = String(data?.incidentDetails?.locationName ?? "").trim();
         const location =
-          incident?.incidentDetails?.location ||
-          incident?.incidentDetails?.locationId ||
-          "Unknown Location";
+        (locIdOrText && locationNameById.get(locIdOrText)) ||
+        (locReadable || locIdOrText) ||
+        "N/A";
+
+        
   
         // Notification (new schema + legacy keys for compatibility)
         await addDoc(collection(db, "notifications"), {
@@ -77,7 +81,6 @@ export default function ReportSubmitted() {
           toUserId:    user.uid,
           fromUserId:  user.uid,
           fromUserName: displayFirst,
-          company:     userData.company || null,
           type:        "report",
           status:      "unread",
         });

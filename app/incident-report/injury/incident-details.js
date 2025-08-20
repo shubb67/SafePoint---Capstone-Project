@@ -2,13 +2,11 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { MapPin, X } from "lucide-react";
+import { MapPin, X, Trash2, Volume2 } from "lucide-react";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import VoiceRecorderModal from "../../components/VoiceRecorderModal";
-import { Trash2, Volume2 } from "lucide-react";
 import { getDoc, doc } from "firebase/firestore";
 import { auth, db } from "@/_utils/firebase";
-
 
 export default function NearMissIncidentDetails() {
   const navigate = useNavigate();
@@ -18,22 +16,17 @@ export default function NearMissIncidentDetails() {
   // ─── form state ─────────────────────────────
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
-  const [location, setLocation] = useState("");
+  const [location, setLocation] = useState("");        // store locationId (or text)
   const [description, setDescription] = useState("");
 
-  // ─── Google Places autocomplete state (disabled for now) ─────────
+  // ─── location dropdown (Firestore) ─────────
+  const [locations, setLocations] = useState([]);      // [{locationId, name, isMainLocation,...}]
   const [locationInput, setLocationInput] = useState("");
-  const [showSuggestions, setShowSuggestions] = useState(false);
-  const [suggestions, setSuggestions] = useState([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(-1);
-  const [isLoadingSuggestions, setIsLoadingSuggestions] = useState(false);
-  const locationInputRef = useRef(null);
-  const suggestionsRef = useRef(null);
-  const autocompleteService = useRef(null);
-  const sessionToken = useRef(null);
-  
-  // Feature flag - set to true awaiting Google API key
-  const ENABLE_GOOGLE_PLACES = false;
+
+  const inputRef = useRef(null);
+  const dropdownRef = useRef(null);
 
   // ─── voice recording state ─────────────────
   const [showVoiceUI, setShowVoiceUI] = useState(false);
@@ -44,11 +37,9 @@ export default function NearMissIncidentDetails() {
   const [modalOpen, setModalOpen] = useState(false);
   const [audioName, setAudioName] = useState("");
   const [showRecorder, setShowRecorder] = useState(true);
-  const [locations, setLocations] = useState([]); // from workspace
-  const [showDropdown, setShowDropdown] = useState(false);
 
-  const inputRef = useRef(null);
-  const dropdownRef = useRef(null);
+  // Feature flag (Google Places disabled)
+  const ENABLE_GOOGLE_PLACES = false;
 
   // Fetch workspace locations for current user
   useEffect(() => {
@@ -63,7 +54,20 @@ export default function NearMissIncidentDetails() {
 
         const wsSnap = await getDoc(doc(db, "workspaces", wsId));
         if (wsSnap.exists()) {
-          const locs = wsSnap.data()?.locations ?? [];
+          const locs = (wsSnap.data()?.locations ?? [])
+            .filter(Boolean)
+            .map(l => ({
+              locationId: l.locationId ?? "",
+              name: (l.name ?? "").trim(),
+              isMainLocation: !!l.isMainLocation,
+            }))
+            .filter(l => l.name);
+          // sort: main first, then A→Z
+          locs.sort((a, b) => {
+            if (a.isMainLocation && !b.isMainLocation) return -1;
+            if (!a.isMainLocation && b.isMainLocation) return 1;
+            return a.name.localeCompare(b.name);
+          });
           setLocations(locs);
         }
       } catch (err) {
@@ -72,208 +76,81 @@ export default function NearMissIncidentDetails() {
     })();
   }, []);
 
+  // Filtered list based on input
+  const filteredLocations = locations.filter(l =>
+    l.name.toLowerCase().includes(locationInput.trim().toLowerCase())
+  );
+
   const handleInputChange = (e) => {
     setLocationInput(e.target.value);
     setShowDropdown(true);
+    setSelectedIndex(-1);
+    // While typing free text, keep plain text in `location`
+    setLocation(e.target.value);
   };
 
   const handleClear = () => {
     setLocationInput("");
+    setLocation("");
     setShowDropdown(false);
-    onSelect?.(null);
+    setSelectedIndex(-1);
+    inputRef.current?.focus();
   };
 
   const handleSelect = (loc) => {
     setLocationInput(loc.name);
+    setLocation(loc.locationId || loc.name); // prefer id, fallback to name
     setShowDropdown(false);
-    onSelect?.(loc);
-  };
-
- 
-
-  // animated dots during processing
-  const useDotAnimation = () => {
-    const [dots, setDots] = useState("");
-    useEffect(() => {
-      if (!processing) return;
-      const iv = setInterval(() => setDots(d => (d.length >= 3 ? "" : d + ".")), 500);
-      return () => clearInterval(iv);
-    }, [processing]);
-    return dots;
-  };
-
-  // Initialize Google Places Autocomplete Service (only when enabled)
-  useEffect(() => {
-    if (!ENABLE_GOOGLE_PLACES) return;
-    
-    if (typeof window !== 'undefined' && window.google && window.google.maps) {
-      autocompleteService.current = new window.google.maps.places.AutocompleteService();
-      sessionToken.current = new window.google.maps.places.AutocompleteSessionToken();
-    } else {
-      // Load Google Maps script if not already loaded
-      const script = document.createElement('script');
-      script.src = `https://maps.googleapis.com/maps/api/js?key=${process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY}&libraries=places`;
-      script.async = true;
-      script.defer = true;
-      script.onload = () => {
-        autocompleteService.current = new window.google.maps.places.AutocompleteService();
-        sessionToken.current = new window.google.maps.places.AutocompleteSessionToken();
-      };
-      document.head.appendChild(script);
-    }
-  }, []);
-
-  // Handle clicks outside of suggestions
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        suggestionsRef.current &&
-        !suggestionsRef.current.contains(event.target) &&
-        !locationInputRef.current.contains(event.target)
-      ) {
-        setShowSuggestions(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  // Debounce function
-  const debounce = (func, wait) => {
-    let timeout;
-    return function executedFunction(...args) {
-      const later = () => {
-        clearTimeout(timeout);
-        func(...args);
-      };
-      clearTimeout(timeout);
-      timeout = setTimeout(later, wait);
-    };
-  };
-
-  // Fetch Google Places suggestions (only when enabled)
-  const fetchSuggestions = debounce((input) => {
-    if (!ENABLE_GOOGLE_PLACES || !autocompleteService.current || input.trim().length < 2) {
-      setSuggestions([]);
-      setShowSuggestions(false);
-      return;
-    }
-
-    setIsLoadingSuggestions(true);
-
-    const request = {
-      input: input,
-      sessionToken: sessionToken.current,
-      // You can add more options here like:
-      // types: ['establishment'], // Limit to businesses
-      // componentRestrictions: { country: 'us' }, // Limit to specific country
-      // bounds: new google.maps.LatLngBounds(...), // Limit to specific area
-    };
-
-    autocompleteService.current.getPlacePredictions(request, (predictions, status) => {
-      setIsLoadingSuggestions(false);
-      
-      if (status === window.google.maps.places.PlacesServiceStatus.OK && predictions) {
-        setSuggestions(predictions);
-        setShowSuggestions(true);
-      } else {
-        setSuggestions([]);
-        setShowSuggestions(false);
-      }
-    });
-  }, 300);
-
-  const handleLocationInputChange = (e) => {
-    const value = e.target.value;
-    setLocationInput(value);
-    setLocation(value); // For manual input, store the text directly
-    
-    if (ENABLE_GOOGLE_PLACES && value.trim()) {
-      fetchSuggestions(value);
-    } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
-    }
-  };
-
-  const handleLocationSelect = (place) => {
-    if (ENABLE_GOOGLE_PLACES) {
-      setLocationInput(place.description);
-      setLocation(place.place_id); // Store Google Place ID when enabled
-      // Reset session token after selection
-      sessionToken.current = new window.google.maps.places.AutocompleteSessionToken();
-    }
-    setShowSuggestions(false);
     setSelectedIndex(-1);
   };
 
   const handleKeyDown = (e) => {
-    if (!showSuggestions) return;
+    if (!showDropdown || filteredLocations.length === 0) return;
 
-    switch (e.key) {
-      case "ArrowDown":
-        e.preventDefault();
-        setSelectedIndex(prev =>
-          prev < suggestions.length - 1 ? prev + 1 : prev
-        );
-        break;
-      case "ArrowUp":
-        e.preventDefault();
-        setSelectedIndex(prev => (prev > 0 ? prev - 1 : -1));
-        break;
-      case "Enter":
-        e.preventDefault();
-        if (selectedIndex >= 0 && selectedIndex < suggestions.length) {
-          handleLocationSelect(suggestions[selectedIndex]);
-        }
-        break;
-      case "Escape":
-        setShowSuggestions(false);
-        setSelectedIndex(-1);
-        break;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev + 1) % filteredLocations.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSelectedIndex(prev => (prev <= 0 ? filteredLocations.length - 1 : prev - 1));
+    } else if (e.key === "Enter") {
+      e.preventDefault();
+      if (selectedIndex >= 0) {
+        handleSelect(filteredLocations[selectedIndex]);
+      }
+    } else if (e.key === "Escape") {
+      setShowDropdown(false);
+      setSelectedIndex(-1);
     }
   };
 
-  const handleLocationFocus = () => {
-    if (locationInput.trim() !== "" && suggestions.length > 0) {
-      setShowSuggestions(true);
-    }
-  };
-
-  const handleClearLocation = () => {
-    setLocationInput("");
-    setLocation("");
-    setSuggestions([]);
-    setShowSuggestions(false);
-    locationInputRef.current?.focus();
-  };
-
-  const highlightMatch = (text, query) => {
-    const parts = text.split(new RegExp(`(${query})`, 'gi'));
-    return parts.map((part, index) => 
-      part.toLowerCase() === query.toLowerCase() ? 
-        <span key={index} className="font-semibold">{part}</span> : 
-        part
-    );
-  };
+  // Click outside to close dropdown
+  useEffect(() => {
+    const onDocClick = (e) => {
+      const inInput = inputRef.current && inputRef.current.contains(e.target);
+      const inDrop = dropdownRef.current && dropdownRef.current.contains(e.target);
+      if (!inInput && !inDrop) setShowDropdown(false);
+    };
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
 
   const handleBack = () => navigate(-1);
-  
-  const handleNext = e => {
+
+  const handleNext = (e) => {
     e.preventDefault();
     dispatch({
       type: "SET_STEP_DATA",
       payload: {
         step: "incidentDetails",
-        data: { 
-          date, 
-          time, 
-          location: location, // This will be the manually entered address (or Google Place ID when enabled)
-          locationName: locationInput, // Also store the readable name
-          description, 
-          audioUrl, 
-          transcriptText 
+        data: {
+          date,
+          time,
+          location,             // id or text
+          locationName: locationInput,
+          description,
+          audioUrl,
+          transcriptText
         }
       }
     });
@@ -282,7 +159,6 @@ export default function NearMissIncidentDetails() {
 
   const handleModalSubmit = ({ audioBlob, transcriptText }) => {
     setTranscriptText(transcriptText);
-
     const reader = new FileReader();
     reader.readAsDataURL(audioBlob);
     reader.onloadend = async () => {
@@ -308,7 +184,6 @@ export default function NearMissIncidentDetails() {
         console.error("S3 upload failed:", err);
       }
     };
-
     setModalOpen(false);
   };
 
@@ -319,14 +194,22 @@ export default function NearMissIncidentDetails() {
     setShowRecorder(true);
   };
 
+  const highlightMatch = (text, query) => {
+    if (!query) return text;
+    const parts = text.split(new RegExp(`(${query})`, "gi"));
+    return parts.map((part, i) =>
+      part.toLowerCase() === query.toLowerCase()
+        ? <span key={i} className="font-semibold">{part}</span>
+        : <span key={i}>{part}</span>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8 flex flex-col items-center">
       <div className="w-full max-w-lg">
         {/* progress */}
         <div className="mb-6">
-          <span className="block text-center text-sm text-gray-700 mb-2">
-            Step 3 of 6
-          </span>
+          <span className="block text-center text-sm text-gray-700 mb-2">Step 3 of 6</span>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div className="h-full bg-[#192C63] w-1/2 rounded-full" />
           </div>
@@ -334,114 +217,96 @@ export default function NearMissIncidentDetails() {
 
         {/* header */}
         <div className="flex items-center mb-4">
-          <button onClick={handleBack} className="text-2xl text-gray-800" aria-label="Go back">
-            ←
-          </button>
-          <h1 className="flex-1 text-xl font-semibold text-gray-900 text-center">
-            Incident Details
-          </h1>
+          <button onClick={handleBack} className="text-2xl text-gray-800" aria-label="Go back">←</button>
+          <h1 className="flex-1 text-xl font-semibold text-gray-900 text-center">Incident Details</h1>
           <div style={{ width: "1.5rem" }} />
         </div>
 
-        {/* subtitle */}
         <p className="text-center text-gray-600 text-sm mb-6 px-2">
           Please share what happened, where it took place, and when.
         </p>
 
-        {/* form */}
         <form onSubmit={handleNext} className="space-y-5">
           {/* date */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Date (DD/MM/YYYY)
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Date (DD/MM/YYYY)</label>
             <input
               type="date"
-              placeholder="DD/MM/YYYY"
               value={date}
               onChange={e => setDate(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2
-                         focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
             />
           </div>
 
           {/* time */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Time
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Time</label>
             <input
               type="time"
-              placeholder="Select Time"
               value={time}
               onChange={e => setTime(e.target.value)}
               required
-              className="w-full border border-gray-300 rounded-lg px-3 py-2
-                         focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
             />
           </div>
 
-          {/* location with manual input (Google Places disabled) */}
+          {/* location dropdown */}
           <div className="relative">
-      <label className="block text-sm font-medium text-gray-700 mb-1">
-        Location
-      </label>
-
-      <div className="relative">
-        <input
-          ref={inputRef}
-          type="text"
-          value={locationInput}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => setShowDropdown(true)}
-          placeholder="Select workspace location..."
-          required
-          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg
-                     focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
-          autoComplete="off"
-        />
-
-        {locationInput && (
-          <button
-            type="button"
-            onClick={handleClear}
-            className="absolute inset-y-0 right-0 flex items-center pr-3"
-          >
-            <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
-          </button>
-        )}
-      </div>
-
-      {showDropdown && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-auto"
-        >
-          {locations.length === 0 && (
-            <div className="px-4 py-3 text-gray-500 text-sm">
-              No locations available
+            <label className="block text-sm font-medium text-gray-700 mb-1">Location</label>
+            <div className="relative">
+              <input
+                ref={inputRef}
+                type="text"
+                value={locationInput}
+                onChange={handleInputChange}
+                onKeyDown={handleKeyDown}
+                onFocus={() => setShowDropdown(true)}
+                placeholder="Select workspace location..."
+                required
+                className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-lg focus:border-[#192C63] focus:ring focus:ring-[#192C63]/30 text-black"
+                autoComplete="off"
+              />
+              {locationInput && (
+                <button type="button" onClick={handleClear} className="absolute inset-y-0 right-0 flex items-center pr-3">
+                  <X className="h-4 w-4 text-gray-400 hover:text-gray-600" />
+                </button>
+              )}
             </div>
-          )}
-          {locations.map((loc, idx) => {
-            const isHighlighted = idx === selectedIndex;
-            return (
+
+            {showDropdown && (
               <div
-                key={loc.locationId}
-                onClick={() => handleSelect(loc)}
-                className={`px-4 py-3 cursor-pointer flex items-center gap-3 transition-colors ${
-                  isHighlighted ? "bg-[#192C63]/10" : "hover:bg-gray-50"
-                }`}
+                ref={dropdownRef}
+                className="absolute z-10 w-full mt-1 bg-white rounded-lg shadow-lg border border-gray-200 max-h-60 overflow-auto"
               >
-                <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0" />
-                <div className="flex-1 text-black font-medium">{loc.name}</div>
+                {filteredLocations.length === 0 && (
+                  <div className="px-4 py-3 text-gray-500 text-sm">No locations available</div>
+                )}
+                {filteredLocations.map((loc, idx) => {
+                  const isHighlighted = idx === selectedIndex;
+                  return (
+                    <div
+                      key={loc.locationId || loc.name}
+                      onClick={() => handleSelect(loc)}
+                      className={`px-4 py-3 cursor-pointer flex items-start gap-3 transition-colors ${
+                        isHighlighted ? "bg-[#192C63]/10" : "hover:bg-gray-50"
+                      }`}
+                    >
+                      <MapPin className="h-4 w-4 text-gray-400 flex-shrink-0 mt-0.5" />
+                      <div className="flex-1">
+                        <div className="text-black font-medium">
+                          {highlightMatch(loc.name, locationInput)}
+                        </div>
+                        {loc.isMainLocation && (
+                          <div className="text-xs text-gray-500">Main location</div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            )}
+          </div>
 
           {!audioUrl && (
             <>
@@ -467,7 +332,7 @@ export default function NearMissIncidentDetails() {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                Don&apos;t want to type? Just speak.
+                  Don&apos;t want to type? Just speak.
                 </label>
                 <button
                   type="button"
@@ -489,7 +354,7 @@ export default function NearMissIncidentDetails() {
                   <p className="text-xs text-gray-500">Audio uploaded</p>
                 </div>
               </div>
-              <button onClick={handleDeleteAudio}>
+              <button type="button" onClick={handleDeleteAudio}>
                 <Trash2 className="text-red-500" />
               </button>
             </div>

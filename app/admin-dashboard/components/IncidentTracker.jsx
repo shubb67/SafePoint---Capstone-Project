@@ -36,6 +36,9 @@ import NotifyAllEmployees from './NotifyEmployees';
 import { Listbox } from '@headlessui/react';
 import { signOut } from "firebase/auth";
 import { NavLink } from 'react-router-dom';
+import ImpactResponseCard from './ImpactResponseCard';
+import { onAuthStateChanged } from "firebase/auth";
+import { useCurrentWorkspace } from "./hooks/FetchWorkSpaceMeta";
 
 
 
@@ -66,6 +69,8 @@ const [message, setMessage] = useState('');
   const [notifyMessage, setNotifyMessage] = useState('');
   const [requestUserOptions, setRequestUserOptions] = useState([]);
   const [isSendingRequest, setIsSendingRequest] = useState(false);
+  const [workspaceId, setWorkspaceId] = useState(null);
+  
   
   
   
@@ -81,7 +86,7 @@ const [message, setMessage] = useState('');
   
   
   
-    
+    useCurrentWorkspace(setCompanyName, setWorkspaceId);
   // Helper function to get the right icon for each incident type
 const getIncidentIcon = (type) => {
   switch(type) {
@@ -100,15 +105,14 @@ const getIncidentIcon = (type) => {
   
   // Helper to format image URL
   const imgUrl = img => (img && (img.src || img.default)) || img || "";
-
-  
   
   // --- helpers: write a notification doc ---
   async function sendNotification(recipientUid, payload = {}) {
   if (!recipientUid) return;
   await addDoc(collection(db, "notifications"), {
     userId: recipientUid,                   // who will see it
-    company: payload.company || "",         // optional
+    company: companyName || "", 
+    workspaceId: workspaceId || "",        // optional
     title: payload.title || "Notification",
     message: payload.message || "",
     type: payload.type || "update",         // "report" | "update" | "status" | "infoRequest"
@@ -1079,6 +1083,35 @@ const involvedUserIds = [
     )}
   </div>
 </div>
+
+<ImpactResponseCard 
+barWidth={240}
+  emergency={Boolean(incidentData?.impactInfo?.isEmergency ?? false)}
+  impact={
+    incidentData?.incidentDetails?.severity ||
+    incidentData?.impactInfo?.severity ||
+    "Minimal"
+  }
+  summary={
+    incidentData?.impactInfo?.actionsSummary ||
+    incidentData?.incidentDetails?.description ||
+    ""
+  }
+  onViewFull={() => {
+    // open your full description modal / navigate
+    // e.g. setShowFullDesc(true)
+  }}
+  audio={
+    incidentData?.incidentDetails?.audioUrl
+      ? {
+          url: incidentData.incidentDetails.audioUrl,
+          name:
+            incidentData.incidentDetails.audioUrl.split("/").pop() ||
+            "audiorecording.mov",
+        }
+      : undefined
+  }
+/>
 
 
               {/* Evidence */}

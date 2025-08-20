@@ -74,12 +74,6 @@ export default function Login() {
           const workspace = { id: wsDoc.id, ...wsData };
           userWorkspaces.push(workspace);
           
-          // Get user's role from the workspace members object
-          const memberData = members[userId];
-          if (memberData && memberData.role) {
-            userRole = memberData.role;
-          }
-          
           // Check if this is the user's current workspace
           if (userData.workspaceId === wsDoc.id || userData.currentWorkspace === wsDoc.id) {
             primaryWorkspace = workspace;
@@ -98,16 +92,64 @@ export default function Login() {
       // 4) If no primary workspace set, use the first one
       if (!primaryWorkspace) {
         primaryWorkspace = userWorkspaces[0];
-        // Get role from the primary workspace
+      }
+  
+      // 5) Determine user's role with multiple checks
+      // First check if user is the owner
+      if (primaryWorkspace.ownerId === userId) {
+        userRole = "owner";
+      } else {
+        // Check members object for role
         const members = primaryWorkspace.members || {};
-        if (members[userId] && members[userId].role) {
-          userRole = members[userId].role;
+        const memberData = members[userId];
+        
+        if (memberData) {
+          // Handle different possible role structures
+          if (typeof memberData === 'object') {
+            // Role might be stored as memberData.role
+            if (memberData.role) {
+              userRole = memberData.role;
+            }
+            // Or it might be stored as memberData.userRole
+            else if (memberData.userRole) {
+              userRole = memberData.userRole;
+            }
+          } else if (typeof memberData === 'string') {
+            // Sometimes role might be stored directly as a string
+            userRole = memberData;
+          }
+        }
+        
+        // Also check if role is stored in the user document
+        if (userData.role) {
+          userRole = userData.role;
+        }
+        
+        // Check if there's a workspace-specific role in user data
+        if (userData.workspaceRoles && userData.workspaceRoles[primaryWorkspace.id]) {
+          userRole = userData.workspaceRoles[primaryWorkspace.id];
         }
       }
   
-      // 5) Check if user is the owner (override role if they're the owner)
-      if (primaryWorkspace.ownerId === userId) {
-        userRole = "owner";
+      // Normalize role string (handle case variations)
+      userRole = userRole.toLowerCase().trim();
+      
+      // Handle role variations
+      const adminRoles = ['admin', 'administrator', 'owner', 'superadmin'];
+      const employeeRoles = ['employee', 'user', 'member', 'staff'];
+      const guestRoles = ['guest', 'viewer', 'visitor'];
+      
+      let normalizedRole = 'employee'; // default
+      
+      if (adminRoles.includes(userRole)) {
+        normalizedRole = 'admin';
+      } else if (employeeRoles.includes(userRole)) {
+        normalizedRole = 'employee';
+      } else if (guestRoles.includes(userRole)) {
+        normalizedRole = 'guest';
+      } else {
+        // If role doesn't match known types, keep original
+        normalizedRole = userRole;
       }
   
       // 6) Update user's last login and current workspace
@@ -117,16 +159,22 @@ export default function Login() {
         isActive: true
       });
   
-      // 7) Update member's last active time in workspace
-      const workspaceRef = doc(db, "workspaces", primaryWorkspace.id);
-      await updateDoc(workspaceRef, {
-        [`members.${userId}.lastActiveAt`]: serverTimestamp()
-      });
+      // 7) Update member's last active time in workspace (with error handling)
+      try {
+        const workspaceRef = doc(db, "workspaces", primaryWorkspace.id);
+        await updateDoc(workspaceRef, {
+          [`members.${userId}.lastActiveAt`]: serverTimestamp()
+        });
+      } catch (updateError) {
+        console.warn("Could not update member's last active time:", updateError);
+        // Continue with login even if this update fails
+      }
   
       // 8) Store session data
       localStorage.setItem("currentWorkspaceSetup", primaryWorkspace.id);
-      localStorage.setItem("userRole", userRole);
+      localStorage.setItem("userRole", normalizedRole);
       localStorage.setItem("userId", userId);
+      localStorage.setItem("originalRole", userRole); // Store original role for debugging
       
       // Store list of workspaces if user has multiple
       if (userWorkspaces.length > 1) {
@@ -134,17 +182,31 @@ export default function Login() {
           userWorkspaces.map(ws => ({ id: ws.id, name: ws.companyName || ws.name }))
         ));
       }
+
+      console.log("Login role resolution:", {
+        userId,
+        originalRole: userRole,
+        normalizedRole,
+        primaryWorkspaceId: primaryWorkspace?.id,
+        isOwner: primaryWorkspace?.ownerId === userId,
+        memberData: primaryWorkspace.members?.[userId],
+        userData: userData
+      });
   
-      // 9) Route based on role
-      const roleType = userRole.toLowerCase();
-      
-      if (roleType === "owner" || roleType === "admin") {
+      // 9) Route based on normalized role
+      if (normalizedRole === "admin" || normalizedRole === "owner") {
+        console.log("Routing to admin dashboard");
         navigate("/admin-dashboard");
-      } else if (roleType === "employee") {
+      } else if (normalizedRole === "employee") {
+        console.log("Routing to user dashboard");
         navigate("/user-dashboard");
-      } else {
-        // Guest or viewer roles
+      } else if (normalizedRole === "guest") {
+        console.log("Routing to guest dashboard");
         navigate("/guest-dashboard");
+      } else {
+        // Fallback: if role is unrecognized, default to user dashboard
+        console.log("Unknown role, defaulting to user dashboard");
+        navigate("/user-dashboard");
       }
   
     } catch (err) {
@@ -161,12 +223,15 @@ export default function Login() {
         setError("This account has been disabled. Please contact your administrator.");
       } else if (err.code === 'auth/too-many-requests') {
         setError("Too many failed login attempts. Please try again later.");
+      } else if (err.code === 'auth/invalid-credential') {
+        setError("Invalid email or password. Please try again.");
       } else {
         setError("Failed to login. Please check your credentials and try again.");
       }
     } finally {
       setLoading(false);
     }
+    
   };
 
   return (

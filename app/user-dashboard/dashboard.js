@@ -111,6 +111,13 @@ export default function UserDashboard() {
         const ws = wsSnap.exists() ? wsSnap.data() : null;
         setWorkspaceName(ws?.companyName || "Your Workspace");
 
+        const wsLocations = Array.isArray(ws?.locations) ? ws.locations : [];
+      const locationNameById = new Map(
+        wsLocations
+          .filter(Boolean)
+          .map(l => [String(l.locationId || "").trim(), String(l.name || "").trim()])
+      );
+
         // 3) Pull recent incidents by workspaceId
         const incidentsQ = query(
           collection(db, "reports"),
@@ -132,13 +139,23 @@ export default function UserDashboard() {
           return days > 0 ? `${days} day${days > 1 ? "s" : ""} ago` : `${hrs} hr${hrs > 1 ? "s" : ""} ago`;
         };
 
+        
         incidentsSnap.forEach((d) => {
           const data = d.data();
           allIncidentDates.push(data.createdAt?.toDate?.() || new Date());
+
+          const locIdOrText = String(data?.incidentDetails?.location ?? "").trim();
+          const locReadable  = String(data?.incidentDetails?.locationName ?? "").trim();
+
+          const resolvedLocationName =
+            (locIdOrText && locationNameById.get(locIdOrText)) ||
+            (locReadable || locIdOrText) ||
+            "N/A";
+
           items.push({
             id: d.id,
             type: data.incidentType,
-            location: data.incidentDetails?.location || "N/A",
+            location: resolvedLocationName,
             ago: timeSince(data.createdAt),
             reportedBy: data.userId || "—",
             isCurrentUser: data.userId === uid,

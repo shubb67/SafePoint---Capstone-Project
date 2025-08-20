@@ -4,7 +4,7 @@
 import React, { useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
-import { CloudUpload, Camera, Trash, FileImage, FileVideo } from "lucide-react";
+import { CloudUpload, Camera, Trash, FileImage, FileText, XCircle } from "lucide-react";
 import axios from "axios";
 
 export default function Evidence() {
@@ -12,30 +12,49 @@ export default function Evidence() {
   const dispatch  = useIncidentDispatch();
   const { incidentType } = useIncidentState();
 
-  // In-flight upload tasks: { file, progress, cancel, sizeReadable }
-  const [tasks, setTasks]     = useState([]);
-  // Completed uploads:    { url, name, sizeReadable, type }
+  // In-flight/failed tasks:
+  // { file, progress, cancel, sizeReadable, status: 'uploading'|'failed', errorMessage?: string, startedAt?: number }
+  const [tasks, setTasks] = useState([]);
+
+  // Completed successes: { url, name, sizeReadable, type }
   const [uploads, setUploads] = useState([]);
+
+  // Global banner (e.g., invalid type)
+  const [bannerError, setBannerError] = useState("");
 
   const fileRef   = useRef();
   const cameraRef = useRef();
 
-  // helper: bytes → human-readable
-  const humanFileSize = bytes => {
+  const ALLOWED = new Set(["image/jpeg", "image/png", "application/pdf"]);
+  const ACCEPT_ATTR = "image/*,application/pdf"; // picker filter
+
+  const humanFileSize = (bytes) => {
     const mb = bytes / 1024 / 1024;
-    return mb < 0.1
-      ? `${(mb * 1024).toFixed(1)} KB`
-      : `${mb.toFixed(1)} MB`;
+    return mb < 0.1 ? `${(mb * 1024).toFixed(1)} KB` : `${mb.toFixed(1)} MB`;
   };
 
-  // start one upload task
-  const addUploadTask = file => {
+  const pushFailedTask = (file, msg) => {
+    const sizeReadable = humanFileSize(file.size);
+    setTasks(ts => [
+      ...ts,
+      { file, progress: 0, cancel: null, sizeReadable, status: "failed", errorMessage: msg }
+    ]);
+  };
+
+  const addUploadTask = (file) => {
+    // Validate type
+    if (!ALLOWED.has(file.type)) {
+      pushFailedTask(file, "Invalid file type. Please upload JPG, PNG, or PDF files only.");
+      return;
+    }
+
     const cancelSrc = axios.CancelToken.source();
     const sizeReadable = humanFileSize(file.size);
+    const startedAt = Date.now();
 
     setTasks(ts => [
       ...ts,
-      { file, progress: 0, cancel: cancelSrc.cancel, sizeReadable }
+      { file, progress: 0, cancel: cancelSrc.cancel, sizeReadable, status: "uploading", startedAt }
     ]);
 
     const reader = new FileReader();
@@ -45,54 +64,55 @@ export default function Evidence() {
         const res = await axios.post(
           "/api/aws",
           {
-            fileName:     file.name,
-            fileType:     file.type,
-            base64:       reader.result,
+            fileName: file.name,
+            fileType: file.type,
+            base64:   reader.result,
             incidentType,
-            category:     "evidence",
-            step:         "images",
+            category: "evidence",
+            step:     "images",
           },
           {
             headers: { "Content-Type": "application/json" },
-            onUploadProgress: e => {
-              const prog = Math.round((e.loaded * 100) / e.total);
+            onUploadProgress: (e) => {
+              const prog = Math.round((e.loaded * 100) / (e.total || 1));
               setTasks(ts =>
-                ts.map(t =>
-                  t.file === file ? { ...t, progress: prog } : t
-                )
+                ts.map(t => (t.file === file ? { ...t, progress: prog } : t))
               );
             },
             cancelToken: cancelSrc.token
           }
         );
 
-        // move to completed
+        // success → move to uploads, remove from tasks
         setUploads(u => [
           ...u,
-          {
-            url:  res.data.url,
-            name: file.name,
-            sizeReadable,
-            type: file.type
-          }
+          { url: res.data.url, name: file.name, sizeReadable, type: file.type }
         ]);
-      } catch (err) {
-        if (!axios.isCancel(err)) console.error("Upload error:", err);
-      } finally {
         setTasks(ts => ts.filter(t => t.file !== file));
+      } catch (err) {
+        if (!axios.isCancel(err)) {
+          // mark the card failed and keep it visible
+          const msg = "Upload failed. Please try again.";
+          setTasks(ts =>
+            ts.map(t =>
+              t.file === file ? { ...t, status: "failed", errorMessage: msg } : t
+            )
+          );
+        } else {
+          // canceled by user → remove card
+          setTasks(ts => ts.filter(t => t.file !== file));
+        }
       }
     };
   };
 
-  // handle selection from file picker or camera
-  const handleFiles = e => {
+  const handleFiles = (e) => {
     const files = Array.from(e.target.files || []);
     files.forEach(addUploadTask);
     e.target.value = "";
   };
 
-  // remove a completed upload
-  const deleteUpload = idx => {
+  const deleteUpload = (idx) => {
     setUploads(u => {
       const copy = [...u];
       copy.splice(idx, 1);
@@ -100,20 +120,22 @@ export default function Evidence() {
     });
   };
 
-  // finish step
+  const deleteTask = (file) => {
+    setTasks(ts => ts.filter(t => t.file !== file));
+  };
+
   const handleNext = () => {
+    // only successful uploads are saved
     dispatch({ type: "SET_EVIDENCE", payload: uploads });
-    navigate("/injury/report-submitted"); // adjust path to your next route
+    navigate("/injury/report-submitted");
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50 px-4 pt-6 pb-8">
-      <div className="max-w-md w-full mx-auto flex flex-col flex-1">
+      <div className="max-w-md w-full mx-auto flex flex-col flex-1 relative">
         {/* Progress */}
         <div className="space-y-2 mb-6">
-          <span className="block text-center text-sm text-gray-700">
-            Step 5 of 6
-          </span>
+          <span className="block text-center text-sm text-gray-700">Step 5 of 6</span>
           <div className="h-2 bg-gray-200 rounded-full overflow-hidden">
             <div className="h-full bg-[#192C63] w-5/6 rounded-full" />
           </div>
@@ -121,12 +143,7 @@ export default function Evidence() {
 
         {/* Back + Title */}
         <div className="flex items-center mb-4">
-          <button
-            onClick={() => navigate(-1)}
-            className="text-2xl text-gray-800"
-          >
-            ←
-          </button>
+          <button onClick={() => navigate(-1)} className="text-2xl text-gray-800">←</button>
           <h1 className="flex-1 text-center text-xl font-semibold text-gray-900">
             Upload Evidence
           </h1>
@@ -137,7 +154,7 @@ export default function Evidence() {
           This helps us investigate what happened and how to prevent it in the future.
         </p>
 
-        {/* Select / Capture Buttons */}
+        {/* Select / Capture */}
         <div className="space-y-4">
           <button
             onClick={() => fileRef.current.click()}
@@ -149,7 +166,7 @@ export default function Evidence() {
           <input
             ref={fileRef}
             type="file"
-            accept="image/*,video/*"
+            accept={ACCEPT_ATTR}
             multiple
             className="hidden"
             onChange={handleFiles}
@@ -183,57 +200,89 @@ export default function Evidence() {
           <div className="bg-white rounded-lg shadow p-4 mt-6 space-y-4">
             <h2 className="text-lg font-medium text-gray-800">Documents</h2>
             <div className="space-y-3">
-              {/* In-flight */}
+              {/* In‑flight & Failed */}
               {tasks.map((t, i) => {
-                const isImage = t.file.type.startsWith("image/");
+                const isPdf = t.file.type === "application/pdf";
+                const isUploading = t.status === "uploading";
+                const isFailed = t.status === "failed";
+
                 return (
                   <div
-                    key={i}
-                    className="relative flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+                    key={`task-${i}`}
+                    className={`relative flex items-start space-x-3 p-3 rounded-lg border
+                      ${isFailed
+                        ? "bg-red-50 border-red-300"
+                        : "bg-white border-gray-200"
+                      }`}
                   >
-                    <div className="text-gray-500">
-                      {isImage ? <FileImage size={24} /> : <FileVideo size={24} />}
+                    <div className={`${isFailed ? "text-red-500" : "text-gray-500"} mt-0.5`}>
+                      {isPdf ? <FileText size={24} /> : <FileImage size={24} />}
                     </div>
+
                     <div className="flex-1">
-                      <div className="font-medium text-gray-800">{t.file.name}</div>
-                      <div className="text-sm text-gray-600">
-                        Uploading… {t.progress}%
+                      <div className="flex items-center justify-between">
+                        <div className="font-medium text-gray-800 break-all">
+                          {isFailed ? "Upload Failed" : t.file.name}
+                        </div>
+                        {isFailed && (
+                          <button
+                            onClick={() => deleteTask(t.file)}
+                            className="p-1 text-red-600 hover:text-red-700"
+                            title="Remove"
+                          >
+                            <Trash size={18} />
+                          </button>
+                        )}
                       </div>
+
+                      <div className={`text-sm ${isFailed ? "text-red-700" : "text-gray-600"}`}>
+                        {isFailed
+                          ? (t.errorMessage || "Upload failed.")
+                          : `Uploading… ${t.progress}% • ${t.sizeReadable}`}
+                      </div>
+
+                      {isUploading && (
+                        <div className="mt-2 h-1 bg-gray-200 rounded overflow-hidden">
+                          <div
+                            className="h-full bg-[#192C63]"
+                            style={{ width: `${t.progress}%` }}
+                          />
+                        </div>
+                      )}
                     </div>
-                    <button
-                      onClick={() => t.cancel("User canceled")}
-                      className="p-1 text-gray-500 hover:text-red-600"
-                    >
-                      <Trash size={20} />
-                    </button>
-                    <div className="absolute bottom-1 left-1 right-1 h-1 bg-gray-200 rounded overflow-hidden">
-                      <div
-                        className="h-full bg-[#192C63]"
-                        style={{ width: `${t.progress}%` }}
-                      />
-                    </div>
+
+                    {isUploading && (
+                      <button
+                        onClick={() => t.cancel?.("User canceled")}
+                        className="p-1 text-gray-500 hover:text-red-600"
+                        title="Cancel upload"
+                      >
+                        <XCircle size={20} />
+                      </button>
+                    )}
                   </div>
                 );
               })}
 
               {/* Completed */}
               {uploads.map((u, i) => {
-                const isImage = u.type.startsWith("image/");
+                const isPdf = u.type === "application/pdf";
                 return (
                   <div
-                    key={i}
-                    className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg"
+                    key={`up-${i}`}
+                    className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg bg-white"
                   >
                     <div className="text-gray-500">
-                      {isImage ? <FileImage size={24} /> : <FileVideo size={24} />}
+                      {isPdf ? <FileText size={24} /> : <FileImage size={24} />}
                     </div>
-                    <div className="flex-1">
-                      <div className="font-medium text-gray-800">{u.name}</div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-gray-800 break-all">{u.name}</div>
                       <div className="text-sm text-gray-600">{u.sizeReadable}</div>
                     </div>
                     <button
                       onClick={() => deleteUpload(i)}
                       className="p-1 text-gray-500 hover:text-red-600"
+                      title="Delete"
                     >
                       <Trash size={20} />
                     </button>
@@ -243,20 +292,35 @@ export default function Evidence() {
             </div>
           </div>
         )}
-               <div className="absolute bottom-0 pb-6 left-1/2 transform -translate-x-1/2 px-4 w-full max-w-lg">
-        
-        {/* Next Button */}
-        <button
-          onClick={handleNext}
-          disabled={uploads.length === 0}
-          className={`w-full py-3 mt-auto rounded-lg font-medium text-white transition ${
-            uploads.length
-              ? "bg-[#192C63] hover:bg-[#162050]"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
-        >
-          Next
-        </button>
+
+        {/* Global error banner (e.g., invalid type) */}
+        {bannerError && (
+          <div className="mt-4 rounded-md border border-red-300 bg-red-50 p-3 text-red-800 text-sm flex items-start gap-2">
+            <XCircle className="min-w-4 min-h-4 mt-0.5" size={16} />
+            <div className="flex-1">{bannerError}</div>
+            <button
+              onClick={() => setBannerError("")}
+              className="text-red-700 hover:text-red-900"
+              title="Dismiss"
+            >
+              Dismiss
+            </button>
+          </div>
+        )}
+
+        {/* Bottom Next */}
+        <div className="absolute bottom-0 pb-6 left-1/2 -translate-x-1/2 px-4 w-full max-w-md">
+          <button
+            onClick={handleNext}
+            disabled={uploads.length === 0}
+            className={`w-full py-3 mt-auto rounded-lg font-medium text-white transition ${
+              uploads.length
+                ? "bg-[#192C63] hover:bg-[#162050]"
+                : "bg-gray-400 cursor-not-allowed"
+            }`}
+          >
+            Next
+          </button>
         </div>
       </div>
     </div>

@@ -170,7 +170,7 @@ export default function ImpactInfo() {
                 className={
                   "flex-1 py-2 border rounded-lg text-center font-medium transition " +
                   (emergency === "no"
-                    ? "bg-[#192C63] text-white border-[#192C63]"
+                    ? "bg-[#3B82F6] text-white "
                     : "bg-white text-gray-700 border-gray-300 hover:shadow-sm")
                 }
               >
@@ -231,7 +231,7 @@ export default function ImpactInfo() {
                   placeholder="Write here…"
                   value={description}
                   onChange={e => setDescription(e.target.value)}
-                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#192C63] focus:border-[#192C63] text-black"
+                  className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] text-black"
                 />
               </div>
 
@@ -274,7 +274,7 @@ export default function ImpactInfo() {
         
           <button
             type="submit"
-            className="w-full py-3 bg-[#192C63] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
+            className="w-full py-3 bg-[#3B82F6] text-white rounded-md font-medium mt-8 hover:bg-[#162050] focus:outline-none focus:ring-2 focus:ring-[#162050]"
           >
             Next
           </button>
