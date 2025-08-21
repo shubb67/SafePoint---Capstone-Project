@@ -41,70 +41,154 @@ export default function Evidence() {
     ]);
   };
 
-  const addUploadTask = (file) => {
-    // Validate type
-    if (!ALLOWED.has(file.type)) {
-      pushFailedTask(file, "Invalid file type. Please upload JPG, PNG, or PDF files only.");
-      return;
-    }
+  const DEBUG_UPLOADS = true; // set false in prod if you don’t want verbose console logs
 
-    const cancelSrc = axios.CancelToken.source();
-    const sizeReadable = humanFileSize(file.size);
-    const startedAt = Date.now();
+function extractServerError(err) {
+  // Axios error anatomy
+  const resp     = err?.response;
+  const req      = err?.request;
+  const status   = resp?.status || 0;
 
-    setTasks(ts => [
-      ...ts,
-      { file, progress: 0, cancel: cancelSrc.cancel, sizeReadable, status: "uploading", startedAt }
-    ]);
+  // Try to pull a meaningful message from JSON or plain text
+  let serverMsg = "";
+  if (typeof resp?.data === "string") {
+    serverMsg = resp.data;
+  } else if (resp?.data) {
+    serverMsg = resp.data.error || resp.data.message || resp.data.detail?.message || JSON.stringify(resp.data);
+  }
 
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onloadend = async () => {
-      try {
-        const res = await axios.post(
-          "/api/aws",
-          {
-            fileName: file.name,
-            fileType: file.type,
-            base64:   reader.result,
-            incidentType,
-            category: "evidence",
-            step:     "images",
-          },
-          {
-            headers: { "Content-Type": "application/json" },
-            onUploadProgress: (e) => {
-              const prog = Math.round((e.loaded * 100) / (e.total || 1));
-              setTasks(ts =>
-                ts.map(t => (t.file === file ? { ...t, progress: prog } : t))
-              );
-            },
-            cancelToken: cancelSrc.token
-          }
-        );
+  // Common IDs for tracing
+  const requestId = resp?.data?.detail?.requestId
+                 || resp?.headers?.["x-amz-request-id"]
+                 || resp?.headers?.["x-amz-id-2"]
+                 || resp?.headers?.["x-vercel-id"]
+                 || resp?.headers?.["x-request-id"]
+                 || undefined;
 
-        // success → move to uploads, remove from tasks
-        setUploads(u => [
-          ...u,
-          { url: res.data.url, name: file.name, sizeReadable, type: file.type }
-        ]);
-        setTasks(ts => ts.filter(t => t.file !== file));
-      } catch (err) {
-        if (!axios.isCancel(err)) {
-          // mark the card failed and keep it visible
-          const msg = "Upload failed. Please try again.";
-          setTasks(ts =>
-            ts.map(t =>
-              t.file === file ? { ...t, status: "failed", errorMessage: msg } : t
-            )
-          );
-        } else {
-          // canceled by user → remove card
-          setTasks(ts => ts.filter(t => t.file !== file));
-        }
-      }
+  // Axios code like 'ECONNABORTED', 'ERR_NETWORK', etc.
+  const code = err?.code || resp?.data?.detail?.name || resp?.data?.name;
+
+  // Network/CORS: no response came back
+  if (!resp && req) {
+    return {
+      status: 0,
+      code: code || "NETWORK_ERROR",
+      message: err?.message || "Network error (possible CORS or DNS).",
+      requestId,
+      raw: { err }
     };
+  }
+
+  // Fallbacks
+  const message = serverMsg || err?.message || "Unknown server error";
+
+  return { status, code, message, requestId, raw: { data: resp?.data, headers: resp?.headers } };
+}
+
+const addUploadTask = (file) => {
+  // Validate type
+  if (!ALLOWED.has(file.type)) {
+    pushFailedTask(file, "Invalid file type. Please upload JPG, PNG, or PDF files only.");
+    return;
+  }
+
+  const cancelSrc   = axios.CancelToken.source();
+  const sizeReadable= humanFileSize(file.size);
+  const startedAt   = Date.now();
+
+  setTasks(ts => [
+    ...ts,
+    { file, progress: 0, cancel: cancelSrc.cancel, sizeReadable, status: "uploading", startedAt }
+  ]);
+
+  const reader = new FileReader();
+  reader.readAsDataURL(file);
+
+  reader.onloadend = async () => {
+    try {
+      const res = await axios.post(
+        "/api/aws",
+        {
+          fileName: file.name,
+          fileType: file.type,
+          base64:   reader.result,
+          incidentType,
+          category: "evidence",
+          step:     "images",
+        },
+        {
+          headers: { "Content-Type": "application/json", "Accept": "application/json" },
+          timeout: 60_000, // helpful on slow networks
+          onUploadProgress: (e) => {
+            const total = e.total || file.size || 1; // safer fallback
+            const prog  = Math.round((e.loaded * 100) / total);
+            setTasks(ts => ts.map(t => (t.file === file ? { ...t, progress: prog } : t)));
+          },
+          cancelToken: cancelSrc.token
+        }
+      );
+
+      // success → move to uploads, remove from tasks
+      const url = res?.data?.url;
+      if (!url || !/^https?:\/\//i.test(url)) {
+        // server responded but didn’t provide a usable URL
+        throw new Error("Upload succeeded but server did not return a valid file URL.");
+      }
+
+      setUploads(u => [
+        ...u,
+        { url, name: file.name, sizeReadable, type: file.type }
+      ]);
+      setTasks(ts => ts.filter(t => t.file !== file));
+
+    } catch (err) {
+      if (axios.isCancel(err)) {
+        // canceled by user → remove card
+        setTasks(ts => ts.filter(t => t.file !== file));
+        return;
+      }
+
+      const info = extractServerError(err);
+
+      if (DEBUG_UPLOADS) {
+        console.error("Upload failed (detailed)", {
+          status: info.status,
+          code: info.code,
+          message: info.message,
+          requestId: info.requestId,
+          raw: info.raw
+        });
+      }
+
+      // Human-friendly message for the card
+      let friendly = info.message;
+      if (info.status === 413) {
+        friendly = "File too large for server limit. Try a smaller file or switch to direct-to-S3 uploads.";
+      } else if (info.status === 403) {
+        friendly = "Access denied by S3. Check bucket region, credentials, and policy/ACL.";
+      } else if (info.status === 404) {
+        friendly = "Upload route not found. Check your deployed base path or API URL.";
+      } else if (info.status === 500) {
+        friendly = `Server error: ${info.message}`;
+      } else if (info.status === 0) {
+        friendly = "Network/CORS error — the request didn’t reach the server. Check domain, HTTPS, and CORS.";
+      }
+
+      // Append trace id when present (helps debugging without opening DevTools)
+      if (info.requestId) {
+        friendly += ` (reqId: ${info.requestId})`;
+      }
+
+      // Mark the card failed and keep it visible
+      setTasks(ts =>
+        ts.map(t =>
+          t.file === file ? { ...t, status: "failed", errorMessage: friendly } : t
+        )
+      );
+    }
   };
+};
+
 
   const handleFiles = (e) => {
     const files = Array.from(e.target.files || []);
