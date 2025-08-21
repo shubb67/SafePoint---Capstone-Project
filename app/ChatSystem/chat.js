@@ -33,8 +33,16 @@ import {
   ArrowLeft,
   Home as HomeIcon,
 } from "lucide-react";
-import { Bell, HelpCircle, Home, FileText, MessageSquare } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Bell, HelpCircle, Home, FileText, MessageSquare, Plus, Mic, Bell as BellIcon} from "lucide-react";
+
+import { Link, NavLink,  } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+
+
+
+
+
 
 /** Build the workspace-scoped messages collection path */
 const msgCol = (workspaceId, chatId) =>
@@ -56,9 +64,78 @@ const ChatSystem = () => {
   const [userRole, setUserRole] = useState("user");
   const messagesEndRef = useRef(null);
   const auth = getAuth();
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
 
   const [siteLocation, setSiteLocation] = useState("Main Office");
   const [workspacePhotoUrl, setWorkspacePhotoUrl] = useState("");
+  const unreadCount = notifications.filter((n) => !n.isRead).length;
+  const [adminName, setAdminName] = useState("Admin");
+  const [workspaceLogo, setWorkspaceLogo] = useState("");
+  const [workspaceLocation, setWorkspaceLocation] = useState("Main Office");
+  const [currentView, setCurrentView] = useState("dashboard");
+  const notificationRef = useRef(null);
+  const navigate = useNavigate();
+
+  
+    // Close notifications when clicking outside
+    useEffect(() => {
+      const handleClickOutside = (e) => {
+        if (notificationRef.current && !notificationRef.current.contains(e.target)) {
+          setShowNotifications(false);
+        }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
+  
+    const handleLogout = () => {
+      signOut(auth);
+      navigate("/login");
+    };
+  
+    const markAsRead = (id) =>
+      setNotifications((ns) =>
+        ns.map((n) => (n.id === id ? { ...n, isRead: true } : n))
+      );
+  
+    const handleAction = (notificationId, action) => {
+      console.log(`Action "${action}" clicked for notification ${notificationId}`);
+      markAsRead(notificationId);
+    };
+  
+    const getNotificationIcon = (type) => {
+      switch (type) {
+        case "incident":
+          return "⚠️";
+        case "assignment":
+          return "📋";
+        case "update":
+          return "🔄";
+        default:
+          return "ℹ️";
+      }
+    };
+  
+    const getActionButtonClass = (action) => {
+      switch (action.toLowerCase()) {
+        case "accept":
+          return "bg-green-500 hover:bg-green-600 text-white";
+        case "decline":
+          return "bg-red-500 hover:bg-red-600 text-white";
+        case "view":
+          return "bg-blue-500 hover:bg-blue-600 text-white";
+        default:
+          return "bg-gray-200 hover:bg-gray-300 text-gray-800";
+      }
+    };
+  
+    const handleViewAll = (e) => {
+      e.preventDefault();
+      setCurrentView("viewAll"); // ✅ correct view key
+    };
+  
 
   // Scroll to bottom on new messages
   useEffect(() => {
@@ -246,78 +323,212 @@ const ChatSystem = () => {
   };
 
   return (
-    <div className="min-h-screen bg-white">
-      <header className="bg-[#1a2b5c] text-white">
-        <div className="flex items-center justify-between px-4 sm:px-6 py-3">
-          <div className="flex items-center gap-3">
-            {userRole === "admin" && (
-              <button onClick={() => setShowSidebar(!showSidebar)} className="lg:hidden p-1">
-                <Menu className="w-5 h-5" />
-              </button>
-            )}
-            <h1 className="text-lg sm:text-xl font-semibold">{workspaceName}</h1>
-          </div>
-          <div className="flex items-center gap-2 sm:gap-4">
-            <Bell className="w-4 sm:w-5 h-4 sm:h-5 cursor-pointer" />
-            <User className="w-4 sm:w-5 h-4 sm:h-5 cursor-pointer" />
-            <HelpCircle className="w-4 sm:w-5 h-4 sm:h-5 cursor-pointer hidden sm:block" />
-            <div className="relative hidden md:block">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 pr-4 py-1.5 rounded text-black text-sm w-40 lg:w-64"
-              />
-            </div>
-            <button className="bg-[#4267b2] px-3 sm:px-4 py-1.5 rounded text-sm">☰</button>
-          </div>
-        </div>
-      </header>
-
-      <div className="flex relative">
-        {/* Sidebar for admins */}
-        {userRole === "admin" && (
-          <>
-            <aside
-              className={`fixed lg:static inset-y-0 left-0 z-50 w-54 bg-white shadow-md h-screen transform transition-transform duration-300 ${
-                showSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-              }`}
-            >
-              <div className="p-4">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center gap-3">
-                    {workspacePhotoUrl ? (
-                      <img src={workspacePhotoUrl} alt={workspaceName} className="w-10 h-10 rounded object-cover" />
-                    ) : (
-                      <div className="w-10 h-10 bg-yellow-500 rounded" />
-                    )}
-                    <span className="text-sm font-medium text-black">{siteLocation}</span>
-                  </div>
-                  <button onClick={() => setShowSidebar(false)} className="lg:hidden p-1">
-                    <X className="w-5 h-5" />
-                  </button>
+    <div className="min-h-screen bg-[#f6f9ff]">
+          {/* Header */}
+          <header className="sticky top-0 z-40 bg-white/90 backdrop-blur-sm border-b border-gray-200">
+            <div className="max-w-7xl px-2 sm:px-3 md:px-4">
+              <div className="h-12 flex items-center gap-3">
+                {/* Brand */}
+                <Link to="/admin-dashboard" className="flex items-center gap-2 group">
+                  <img src="/assets/images/safepointlogo.png" alt="SafePoint Logo" className="w-8 h-8" />
+                  <span className="text-sm sm:text-base font-semibold text-blue-600 group-hover:text-blue-700">
+                    SafePoint
+                  </span>
+                </Link>
+    
+                {/* Search (desktop) */}
+                <div className="hidden md:flex ml-auto mr-2 relative w-60 lg:w-72 xl:w-80">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full h-9 pl-9 pr-3 rounded-md border border-gray-300/70 text-sm text-gray-800 placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 bg-white"
+                  />
                 </div>
-                <nav className="space-y-3">
-                  <Link to="/admin-dashboard" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                    <Home className="w-4 h-4" />
-                    <span>Home</span>
+    
+                {/* Icons */}
+                <div className="flex items-center gap-1.5 sm:gap-2 md:gap-3">
+                  {/* Notifications */}
+                  <div className="relative" ref={notificationRef}>
+                    <button
+                      onClick={() => setShowNotifications((s) => !s)}
+                      className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition"
+                      aria-label="Notifications"
+                    >
+                      <Bell className="w-5 h-5" />
+                      {unreadCount > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-[10px] leading-4 text-center font-semibold">
+                          {unreadCount > 9 ? "9+" : unreadCount}
+                        </span>
+                      )}
+                    </button>
+    
+                    {showNotifications && (
+                      <div className="absolute right-0 mt-2 w-[20rem] sm:w-[22rem] md:w-[24rem] bg-white rounded-xl shadow-2xl ring-1 ring-black/5 overflow-hidden z-50">
+                        <div className="bg-gray-50/60 backdrop-blur px-4 py-3 border-b flex items-center justify-between">
+                          <h3 className="text-sm font-semibold text-gray-800">
+                            Notifications
+                          </h3>
+                          <span className="text-xs text-gray-500">{unreadCount} unread</span>
+                        </div>
+    
+                        <div className="max-h-[420px] overflow-y-auto">
+                          {notifications.length === 0 ? (
+                            <div className="py-10 text-center text-sm text-gray-500">
+                              No notifications
+                            </div>
+                          ) : (
+                            notifications.map((n) => (
+                              <div
+                                key={n.id}
+                                className={`px-4 py-3 border-b last:border-0 hover:bg-gray-50 transition ${
+                                  !n.isRead ? "bg-blue-50/40" : ""
+                                }`}
+                              >
+                                <div className="flex items-start gap-3">
+                                  <div className="shrink-0 text-xl mt-0.5">
+                                    {getNotificationIcon(n.type)}
+                                  </div>
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start gap-2">
+                                      <p className="text-sm font-semibold text-gray-900 truncate">
+                                        {n.title}
+                                      </p>
+                                      {!n.isRead && (
+                                        <span className="ml-auto mt-1 h-2 w-2 rounded-full bg-blue-500" />
+                                      )}
+                                    </div>
+                                    <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+                                      {n.description}
+                                    </p>
+                                    <div className="mt-2 flex items-center justify-between">
+                                      <span className="text-xs text-gray-400">{n.time}</span>
+                                      <div className="flex gap-2">
+                                        {n.actions.map((action, i) => (
+                                          <button
+                                            key={i}
+                                            onClick={() => handleAction(n.id, action)}
+                                            className={`px-2.5 py-1 text-xs rounded-md ${getActionButtonClass(
+                                              action
+                                            )}`}
+                                          >
+                                            {action}
+                                          </button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+    
+                        <div className="px-4 py-3 bg-gray-50 text-center border-t">
+                          <Link
+                            to="/notifications"
+                            className="text-sm text-blue-600 hover:text-blue-700 font-medium"
+                          >
+                            View all notifications
+                          </Link>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+    
+                  {/* Help & User */}
+                  <button
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-600 hover:text-gray-800 hover:bg-gray-100 transition"
+                    aria-label="Help"
+                  >
+                    <HelpCircle className="w-5 h-5" />
+                  </button>
+                  <Link to="/admin-profile">
+                    <button
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-gray-100 text-gray-700 hover:bg-gray-200 transition"
+                      aria-label="Account"
+                    >
+                      <User className="w-5 h-5" />
+                    </button>
                   </Link>
-                  <Link to="/reports" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                    <FileText className="w-4 h-4" />
-                    <span>Incident Reports</span>
-                  </Link>
-                  <a href="#" className="flex items-center gap-3 text-sm text-gray-700 hover:text-blue-600">
-                    <MessageSquare className="w-4 h-4" />
-                    <span>Chats</span>
-                  </a>
+    
+                  {/* Mobile search button */}
+                  <div className="md:hidden">
+                    <Search className="w-5 h-5 text-gray-600" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </header>
+    
+          <div className="flex">
+            {/* Sidebar */}
+            <aside className="w-60 h-[calc(100vh-76px)] bg-white border-r">
+              <div className="h-full flex flex-col">
+                {/* Org header */}
+                <div className="px-4 pt-4 pb-3">
+                  <div className="flex items-center gap-3">
+                  {workspaceLogo ? (
+      <img
+        src={workspaceLogo}
+        alt={workspaceName || "Organization"}
+        className="w-9 h-9 rounded object-cover ring-1 ring-gray-200"
+      />
+    ) : (
+      <div className="w-9 h-9 rounded bg-gray-200 ring-1 ring-gray-200" />
+    )}
+    <div className="min-w-0">
+      <p className="text-[13px] font-semibold text-gray-900 truncate">
+        {workspaceName || "Workspace"}
+      </p>
+      <p className="text-[12px] text-gray-500 truncate">
+        {workspaceLocation || "—"}
+      </p>
+    </div>
+                  </div>
+                </div>
+    
+                {/* Nav */}
+                <nav className="px-2 py-2 space-y-1">
+                  <SideLink to="/admin-dashboard" label="Home" icon={<Home className="w-4 h-4" />} />
+                  <SideLink
+                    to="/reports"
+                    label="Incident Reports"
+                    icon={<FileText className="w-4 h-4" />}
+                  />
+                  <SideLink to="/chat" label="Chats" icon={<MessageSquare className="w-4 h-4" />} />
                 </nav>
+    
+                {/* Footer */}
+                <div className="mt-auto px-2 pb-3">{/* ✅ mt-auto pins to bottom */}
+                  <button
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-3 rounded-md px-3 py-2 text-[13px] text-gray-600 hover:bg-gray-50 hover:text-red-600 transition"
+                  >
+                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                      <path d="M16 17l5-5-5-5" />
+                      <path d="M21 12H9" />
+                    </svg>
+                    <span>Log Out</span>
+                  </button>
+    
+                  {/* Current user chip */}
+                  <div className="mt-2 flex items-center gap-2 rounded-md bg-blue-50 px-2 py-2">
+                    <img
+                      src={workspaceLogo || "/assets/avatar.png"}
+                      alt=""
+                      className="w-5 h-5 rounded-full object-cover"
+                    />
+                    <span className="text-[12px] font-medium text-blue-900 truncate">
+                      {adminName || "Admin"}
+                    </span>
+                  </div>
+                </div>
               </div>
             </aside>
-            {showSidebar && <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setShowSidebar(false)} />}
-          </>
-        )}
 
         {/* Chat container */}
         <div className={`flex-1 flex ${userRole === "user" ? "pb-16" : ""}`}>
@@ -529,6 +740,8 @@ const ChatSystem = () => {
         </div>
       </div>
 
+      
+
       {/* Bottom nav (users) */}
       {userRole === "user" && (
         <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-40">
@@ -557,3 +770,21 @@ const ChatSystem = () => {
 };
 
 export default ChatSystem;
+
+function SideLink({ to, label, icon }) {
+  return (
+    <NavLink
+      to={to}
+      className={({ isActive }) =>
+        `flex items-center gap-3 rounded-md px-3 py-2 text-[13px] ${
+          isActive
+            ? "bg-blue-50 text-blue-700"
+            : "text-gray-700 hover:bg-gray-50 hover:text-blue-700"
+        }`
+      }
+    >
+      {icon}
+      <span>{label}</span>
+    </NavLink>
+  );
+}

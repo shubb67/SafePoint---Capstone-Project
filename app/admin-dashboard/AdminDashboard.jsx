@@ -331,9 +331,7 @@ export default function SafePointDashboard() {
           <div className="h-12 flex items-center gap-3">
             {/* Brand */}
             <Link to="/admin-dashboard" className="flex items-center gap-2 group">
-              <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-blue-600 to-blue-400 text-white text-[11px] font-black shadow-sm">
-                SP
-              </span>
+              <img src="/assets/images/safepointlogo.png" alt="SafePoint Logo" className="w-8 h-8" />
               <span className="text-sm sm:text-base font-semibold text-blue-600 group-hover:text-blue-700">
                 SafePoint
               </span>
