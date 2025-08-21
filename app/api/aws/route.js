@@ -4,7 +4,7 @@ import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 // ---------- HARD-CODE TEST VALUES (TEMPORARY!) ----------
 const AWS_REGION           = "us-east-2";            // e.g., "us-east-1"
 const AWS_S3_BUCKET        = "safepoint-sait";       // e.g., "safepoint-sait"
-const AWS_ACCESS_KEY_ID    = "AKIAVW66666666666666";
+const AWS_ACCESS_KEY_ID    = "AKIA5NDFWW6ATCMRWNYA";
 const AWS_SECRET_ACCESS_KEY= "abHqNOQEe3KcMvtcJvo0jNMoyjl4y7NVvVl21vVc";
 // const USE_PUBLIC_READ   = false; // set to true ONLY if bucket policy allows and BPA is off
 // --------------------------------------------------------
