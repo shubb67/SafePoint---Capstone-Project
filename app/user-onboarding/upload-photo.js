@@ -184,7 +184,7 @@ export default function AddProfilePhoto() {
             <div className="space-y-3">
               {/* Legal text - moved above buttons */}
               <p className="text-center text-[11px] leading-4 text-gray-400 pb-2">
-                By clicking 'Create Account', I am agreeing to SafePoint's{" "}
+              By clicking &apos;Create Account&apos;, I am agreeing to SafePoint&apos;s{" "}
                 <u className="cursor-pointer hover:text-gray-600">Legal Agreements</u> and{" "}
                 <u className="cursor-pointer hover:text-gray-600">Terms & Conditions</u>.
               </p>
@@ -282,7 +282,7 @@ export default function AddProfilePhoto() {
             <div className="space-y-3">
               {/* Legal text - moved above buttons */}
               <p className="text-center text-[11px] leading-4 text-gray-400 pb-2">
-                By clicking 'Create Account', I am agreeing to SafePoint's{" "}
+              By clicking &apos;Create Account&apos;, I am agreeing to SafePoint&apos;s{" "}
                 <u className="cursor-pointer hover:text-gray-600">Legal Agreements</u> and{" "}
                 <u className="cursor-pointer hover:text-gray-600">Terms & Conditions</u>.
               </p>

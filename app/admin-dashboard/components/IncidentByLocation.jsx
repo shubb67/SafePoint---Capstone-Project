@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { collection, getDocs, where, query, orderBy } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, where, query, orderBy } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 
@@ -9,6 +9,7 @@ const IncidentsByLocation = () => {
   const [locationData, setLocationData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [locationNames, setLocationNames] = useState(new Map());
   
   // Colors for different locations
   const colors = ['#1e3a8a', '#3b82f6', '#60a5fa', '#93c5fd'];
@@ -32,25 +33,37 @@ const IncidentsByLocation = () => {
         return;
       }
 
-      // Get current admin's data
-      const adminSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
-      const admin = adminSnap.docs[0]?.data();
-      const adminCompany = admin?.company;
+      // Get user's workspace ID
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+      if (!userDoc.exists()) {
+        setError("User data not found");
+        setLoading(false);
+        return;
+      }
       
-      if (!adminCompany) {
-        setError("Company not found");
+      const userData = userDoc.data();
+      const workspaceId = userData.workspaceId;
+      
+      if (!workspaceId) {
+        setError("User not assigned to any workspace");
         setLoading(false);
         return;
       }
 
-      // Get all users from the company
-      const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", adminCompany)));
-      const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
-
-      if (orgUserIds.length === 0) {
-        setLocationData([]);
-        setLoading(false);
-        return;
+      // Get workspace data to resolve location names
+      const workspaceDoc = await getDoc(doc(db, "workspaces", workspaceId));
+      if (workspaceDoc.exists()) {
+        const workspaceData = workspaceDoc.data();
+        const locations = workspaceData.locations || [];
+        
+        // Create a map of locationId to location name
+        const locMap = new Map();
+        locations.forEach(loc => {
+          if (loc.locationId && loc.name) {
+            locMap.set(String(loc.locationId).trim(), String(loc.name).trim());
+          }
+        });
+        setLocationNames(locMap);
       }
 
       // Calculate date range
@@ -70,58 +83,68 @@ const IncidentsByLocation = () => {
         case 'Max':
           startDate = new Date('2020-01-01'); // Or your earliest data
           break;
+        default:
+          startDate.setMonth(startDate.getMonth() - 1);
       }
 
-      // Fetch incidents from all users in the organization
-      // Note: Firestore has a limit of 10 items for 'in' queries, so we might need to batch
-      const allIncidents = [];
+      // Fetch all incidents for this workspace
+      const incidentsQuery = query(
+        collection(db, "reports"),
+        where("workspaceId", "==", workspaceId),
+        where("createdAt", ">=", startDate),
+        where("createdAt", "<=", endDate),
+        orderBy("createdAt", "desc")
+      );
+
+      const incidentsSnap = await getDocs(incidentsQuery);
       
-      // Process in batches of 10 due to Firestore limitation
-      for (let i = 0; i < orgUserIds.length; i += 10) {
-        const batch = orgUserIds.slice(i, i + 10);
-        const incidentsSnap = await getDocs(
-          query(
-            collection(db, "reports"),
-            where("userId", "in", batch),
-            orderBy("createdAt", "desc")
-          )
-        );
+      const allIncidents = [];
+      incidentsSnap.forEach((doc) => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate?.() || data.createdAt;
         
-        incidentsSnap.docs.forEach(doc => {
-          const data = doc.data();
-          const createdAt = data.createdAt?.toDate?.() || new Date();
-          
-          // Filter by date range
-          if (createdAt >= startDate && createdAt <= endDate) {
-            allIncidents.push({
-              ...data,
-              id: doc.id,
-              createdAt: createdAt
-            });
-          }
-        });
-      }
+        if (createdAt instanceof Date) {
+          allIncidents.push({
+            ...data,
+            id: doc.id,
+            createdAt
+          });
+        }
+      });
 
-      // Process location data
-      const processedData = processLocationData(allIncidents);
+      // Process location data with location name resolution
+      const processedData = processLocationData(allIncidents, locationNames);
       setLocationData(processedData);
       
     } catch (err) {
       console.error("Error fetching location data:", err);
-      setError(err.message);
+      setError(err.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
   };
 
-  const processLocationData = (incidents) => {
+  const processLocationData = (incidents, locNameMap) => {
     // Group incidents by location
     const locationCounts = {};
     let totalIncidents = 0;
 
     incidents.forEach(incident => {
-      const location = incident.incidentDetails?.location || 'Other';
-      locationCounts[location] = (locationCounts[location] || 0) + 1;
+      // Try to get location from incidentDetails
+      const locationId = String(incident.incidentDetails?.location || '').trim();
+      const locationNameFromData = String(incident.incidentDetails?.locationName || '').trim();
+      
+      // Resolve location name: try map first, then use provided name, then ID, then 'Other'
+      let locationName = 'Other';
+      if (locationId && locNameMap.has(locationId)) {
+        locationName = locNameMap.get(locationId);
+      } else if (locationNameFromData) {
+        locationName = locationNameFromData;
+      } else if (locationId) {
+        locationName = locationId;
+      }
+      
+      locationCounts[locationName] = (locationCounts[locationName] || 0) + 1;
       totalIncidents++;
     });
 
@@ -144,11 +167,18 @@ const IncidentsByLocation = () => {
       const otherTotal = otherLocations.reduce((sum, loc) => sum + loc.value, 0);
       const otherCount = otherLocations.reduce((sum, loc) => sum + loc.count, 0);
       
-      topLocations.push({
-        name: 'Other',
-        value: parseFloat(otherTotal.toFixed(1)),
-        count: otherCount
-      });
+      // Check if "Other" already exists in top locations
+      const existingOtherIndex = topLocations.findIndex(loc => loc.name === 'Other');
+      if (existingOtherIndex !== -1) {
+        topLocations[existingOtherIndex].value += otherTotal;
+        topLocations[existingOtherIndex].count += otherCount;
+      } else {
+        topLocations.push({
+          name: 'Other',
+          value: parseFloat(otherTotal.toFixed(1)),
+          count: otherCount
+        });
+      }
       
       chartData = topLocations;
     }
@@ -197,8 +227,10 @@ const IncidentsByLocation = () => {
               <button
                 key={range}
                 onClick={() => setTimeRange(range)}
-                className={`px-2 py-1 rounded ${
-                  timeRange === range ? 'bg-gray-200 text-black' : 'text-black'
+                className={`px-2 py-1 rounded transition-colors ${
+                  timeRange === range 
+                    ? 'bg-gray-200 text-black font-medium' 
+                    : 'text-gray-600 hover:bg-gray-100'
                 }`}
               >
                 {range}
@@ -222,8 +254,10 @@ const IncidentsByLocation = () => {
             <button
               key={range}
               onClick={() => setTimeRange(range)}
-              className={`px-2 py-1 rounded ${
-                timeRange === range ? 'bg-gray-200 text-black' : 'text-black'
+              className={`px-2 py-1 rounded transition-colors ${
+                timeRange === range 
+                  ? 'bg-gray-200 text-black font-medium' 
+                  : 'text-gray-600 hover:bg-gray-100'
               }`}
             >
               {range}
@@ -252,15 +286,22 @@ const IncidentsByLocation = () => {
             </PieChart>
           </ResponsiveContainer>
         </div>
-      <div className="text-sm space-y-2">
+        <div className="text-sm space-y-2">
           {locationData.map((item, index) => (
             <div key={index} className="flex items-center gap-2 text-black">
               <span 
-                className="w-3 h-3 rounded-full" 
+                className="w-3 h-3 rounded-full flex-shrink-0" 
                 style={{ backgroundColor: item.color }}
               ></span>
-              <span>{item.name}</span>
-              <span className="font-medium">{item.value}%</span>
+              <span className="truncate max-w-[120px]" title={item.name}>
+                {item.name}
+              </span>
+              <span className="font-medium ml-auto">
+                {item.value}%
+              </span>
+              <span className="text-gray-500 text-xs">
+                ({item.count})
+              </span>
             </div>
           ))}
         </div>

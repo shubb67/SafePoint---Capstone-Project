@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, where, orderBy } from "firebase/firestore";
+import { collection, getDocs, getDoc, doc, query, where, orderBy } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 import {
@@ -38,20 +38,27 @@ export default function IncidentsOverTime() {
     try {
       const auth = getAuth();
       const currentUser = auth.currentUser;
-      if (!currentUser) return;
+      if (!currentUser) {
+        setError("User not authenticated");
+        return;
+      }
 
-      const userSnap = await getDocs(
-        query(collection(db, "users"), where("__name__", "==", currentUser.uid))
-      );
-      const user = userSnap.docs[0]?.data();
-      const company = user?.company;
-      if (!company) throw new Error("Company not found");
+      // Get user's workspace ID
+      const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+      if (!userDoc.exists()) {
+        setError("User data not found");
+        return;
+      }
+      
+      const userData = userDoc.data();
+      const workspaceId = userData.workspaceId;
+      
+      if (!workspaceId) {
+        setError("User not assigned to any workspace");
+        return;
+      }
 
-      const usersSnap = await getDocs(
-        query(collection(db, "users"), where("company", "==", company))
-      );
-      const userIds = usersSnap.docs.map((doc) => doc.id);
-
+      // Calculate date range
       const endDate = new Date();
       let startDate = new Date();
       switch (range) {
@@ -67,32 +74,39 @@ export default function IncidentsOverTime() {
         case "Max":
           startDate = new Date("2020-01-01");
           break;
+        default:
+          startDate.setMonth(startDate.getMonth() - 3);
       }
 
-      // fetch all incidents
+      // Fetch all incidents for this workspace
+      const reportsQuery = query(
+        collection(db, "reports"),
+        where("workspaceId", "==", workspaceId),
+        where("createdAt", ">=", startDate),
+        where("createdAt", "<=", endDate),
+        orderBy("createdAt", "desc")
+      );
+
+      const reportsSnap = await getDocs(reportsQuery);
+      
       const allIncidents = [];
-      for (let i = 0; i < userIds.length; i += 10) {
-        const batch = userIds.slice(i, i + 10);
-        const reportsSnap = await getDocs(
-          query(
-            collection(db, "reports"),
-            where("userId", "in", batch),
-            orderBy("createdAt", "desc")
-          )
-        );
-        reportsSnap.forEach((doc) => {
-          const data = doc.data();
-          const createdAt = data.createdAt?.toDate?.();
-          if (createdAt >= startDate && createdAt <= endDate) {
-            allIncidents.push({ ...data, createdAt });
-          }
-        });
-      }
+      reportsSnap.forEach((doc) => {
+        const data = doc.data();
+        const createdAt = data.createdAt?.toDate?.() || data.createdAt;
+        if (createdAt instanceof Date) {
+          allIncidents.push({ 
+            ...data, 
+            id: doc.id,
+            createdAt 
+          });
+        }
+      });
 
-      // bucket by month
+      // Generate chart data
       setChartData(generateChartData(allIncidents, startDate, endDate, range));
     } catch (err) {
-      setError(err.message);
+      console.error("Error loading incidents data:", err);
+      setError(err.message || "Failed to load data");
     } finally {
       setLoading(false);
     }
@@ -102,51 +116,75 @@ export default function IncidentsOverTime() {
     const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
     let result = [];
 
-    // Decide periods (by month for "1Y", "Max", else week)
+    // Monthly grouping for 1QR, 1Y, and Max
     if (range === "1Y" || range === "Max" || range === "1QR") {
       // Fill each month in range
       let current = new Date(start.getFullYear(), start.getMonth(), 1);
       let until = new Date(end.getFullYear(), end.getMonth(), 1);
+      
       while (current <= until) {
         result.push({
           name: months[current.getMonth()],
           year: current.getFullYear(),
+          month: current.getMonth(),
           count: 0,
         });
         current.setMonth(current.getMonth() + 1);
       }
+      
       // Assign incidents to months
       incidents.forEach((incident) => {
         const d = incident.createdAt;
         const idx = result.findIndex(
-          (r) => r.year === d.getFullYear() && r.name === months[d.getMonth()]
+          (r) => r.year === d.getFullYear() && r.month === d.getMonth()
         );
-        if (idx !== -1) result[idx].count += 1;
+        if (idx !== -1) {
+          result[idx].count += 1;
+        }
       });
-      // Remove year for x-axis label (matches screenshot)
-      result = result.map((r) => ({ name: r.name, count: r.count }));
+      
+      // For display, if range spans multiple years, show year with month
+      const hasMultipleYears = new Set(result.map(r => r.year)).size > 1;
+      result = result.map((r) => ({
+        name: hasMultipleYears ? `${r.name} ${r.year.toString().slice(-2)}` : r.name,
+        count: r.count
+      }));
+      
     } else if (range === "1M") {
-      // Split into 4 weeks of past month
+      // Weekly grouping for 1 month view
+      const weekNames = ["Week 1", "Week 2", "Week 3", "Week 4"];
       const step = (end - start) / 4;
+      
       for (let i = 0; i < 4; i++) {
         const periodStart = new Date(start.getTime() + i * step);
+        const periodEnd = new Date(start.getTime() + (i + 1) * step);
+        
         result.push({
-          name: `${periodStart.getDate()}/${periodStart.getMonth() + 1}`,
+          name: weekNames[i],
           count: 0,
+          start: periodStart,
+          end: periodEnd
         });
       }
+      
+      // Assign incidents to weeks
       incidents.forEach((incident) => {
         const d = incident.createdAt;
         for (let i = 0; i < 4; i++) {
-          const periodStart = new Date(start.getTime() + i * step);
-          const periodEnd = new Date(start.getTime() + (i + 1) * step);
-          if (d >= periodStart && d < periodEnd) {
+          if (d >= result[i].start && d < result[i].end) {
             result[i].count += 1;
             break;
           }
         }
       });
+      
+      // Clean up for display
+      result = result.map(r => ({
+        name: r.name,
+        count: r.count
+      }));
     }
+    
     return result;
   }
 
@@ -174,14 +212,22 @@ export default function IncidentsOverTime() {
           ))}
         </div>
       </div>
+      
       {error && (
-        <div className="flex items-center justify-center h-40 text-red-600">{error}</div>
+        <div className="flex items-center justify-center h-40 text-red-600">
+          {error}
+        </div>
       )}
+      
       {loading ? (
         <div className="flex items-center justify-center h-48">
           <div className="animate-spin h-8 w-8 border-b-2 border-indigo-400 rounded-full"></div>
         </div>
-      ) : (
+      ) : !error && chartData.length === 0 ? (
+        <div className="flex items-center justify-center h-48 text-gray-500">
+          No incidents found for the selected period
+        </div>
+      ) : !error ? (
         <div className="h-56">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
@@ -190,26 +236,29 @@ export default function IncidentsOverTime() {
                 dataKey="name"
                 axisLine={false}
                 tickLine={false}
-                tick={{ fill: "#313B52", fontSize: 15, fontWeight: 500 }}
+                tick={{ fill: "#313B52", fontSize: 12, fontWeight: 500 }}
+                angle={chartData.length > 6 ? -45 : 0}
+                textAnchor={chartData.length > 6 ? "end" : "middle"}
+                height={chartData.length > 6 ? 60 : 30}
               />
               <YAxis
                 axisLine={false}
                 tickLine={false}
-                domain={[0, (dataMax) => Math.max(11, dataMax)]}
+                domain={[0, (dataMax) => Math.max(5, Math.ceil(dataMax * 1.1))]}
                 allowDecimals={false}
                 tick={{ fill: "#CBD5E1", fontSize: 14 }}
-                interval="preserveStartEnd"
+                ticks={Array.from({length: 6}, (_, i) => i * 2)}
               />
               <Tooltip
                 cursor={{ fill: "#E0E7FF", opacity: 0.3 }}
                 contentStyle={{
                   borderRadius: 8,
                   background: "#fff",
-                  border: "none",
-                  boxShadow: "0 1px 4px #bcd",
+                  border: "1px solid #E2E8F0",
+                  boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
                 }}
                 labelStyle={{ color: "#64748B", fontWeight: 500 }}
-                formatter={(value) => [`${value} incidents`, "Total"]}
+                formatter={(value) => [`${value} incident${value !== 1 ? 's' : ''}`, "Total"]}
               />
               <Bar
                 dataKey="count"
@@ -221,7 +270,7 @@ export default function IncidentsOverTime() {
             </BarChart>
           </ResponsiveContainer>
         </div>
-      )}
+      ) : null}
     </div>
   );
 }

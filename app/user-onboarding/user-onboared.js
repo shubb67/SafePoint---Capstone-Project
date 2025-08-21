@@ -68,7 +68,7 @@ export default function FinalStep() {
       <div className="flex-1 flex flex-col items-center justify-center px-6">
         {/* Title */}
         <h1 className="text-2xl font-semibold text-gray-900 mb-2 text-center">
-          Let's Get to Work - Safely
+          Let&apos;s Get to Work - Safely
         </h1>
         
         {/* Subtitle */}
