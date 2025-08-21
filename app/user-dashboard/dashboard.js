@@ -26,7 +26,7 @@ import { getAuth } from "firebase/auth";
 import { db } from "@/_utils/firebase";
 
 import { calculateSafetyRecord } from "@/_utils/safetyRecordUtils";
-import RecentIncidents from "./components/RecentIncidents";
+import RecentNotifications from "./components/RecentIncidents";
 import NotificationCenter from "./components/NotificationCenter";
 
 export default function UserDashboard() {
@@ -42,6 +42,7 @@ export default function UserDashboard() {
   const [userName, setUserName] = useState("User");
   const [workspaceName, setWorkspaceName] = useState("…");
   const [projectSite, setProjectSite] = useState("…");
+  const [workspaceId, setWorkspaceId] = useState(null);
 
   // Data state
   const [recentIncidents, setRecentIncidents] = useState([]);
@@ -96,7 +97,8 @@ export default function UserDashboard() {
         setUserName(user.firstName || "User");
         setProjectSite(user.siteLocation || "Unknown Site");
 
-        const workspaceId = user.workspaceId || null;
+        const workspaceId = user.workspaceId || user.currentWorkspace || null;
+        setWorkspaceId(workspaceId);
         if (!workspaceId) {
           // User hasn’t joined a workspace yet
           setWorkspaceName("No Workspace");
@@ -204,34 +206,37 @@ export default function UserDashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 pb-24">
-      {!showNotifications ? (
-        <>
-          {/* Header */}
-          <div className="px-4 pt-6">
-            <div className="flex items-center justify-between relative">
-              <div>
-                <p className="text-sm text-gray-500">{formattedDate}</p>
-                <h2 className="mt-2 text-2xl font-semibold text-gray-900">
-                  Good morning, {userName}!
-                </h2>
-              </div>
-
-              <button
-                aria-label="Open notifications"
-                className="p-2 rounded-full bg-white shadow relative"
-                onClick={() => setShowNotifications(true)}
-              >
-                <Bell className="w-6 h-6 text-gray-700" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold">
-                    {unreadCount > 9 ? "9+" : unreadCount}
-                  </span>
-                )}
-              </button>
-            </div>
+<div className="min-h-screen bg-gray-50 pb-24">
+  {!showNotifications ? (
+    <>
+      {/* Header */}
+      <div className="px-4 pt-6">
+        <div className="flex items-center justify-between relative">
+          <div>
+            <p className="text-sm text-gray-500">{formattedDate}</p>
+            <h2 className="mt-2 text-2xl font-semibold text-gray-900">
+              Good morning, {userName}!
+            </h2>
           </div>
 
+          <button
+            aria-label="Open notifications"
+            className="p-2 rounded-full bg-white shadow relative"
+            onClick={() => setShowNotifications(true)}
+          >
+            <Bell className="w-6 h-6 text-gray-700" />
+            {unreadCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-red-500 text-white text-[10px] leading-[18px] text-center font-semibold">
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {/* When NOT showing the full incidents list, show dashboard sections */}
+      {!showIncidents ? (
+        <>
           {/* Stats card */}
           <div className="mt-4 px-2">
             <div className="bg-white rounded-xl shadow-sm p-3">
@@ -271,7 +276,7 @@ export default function UserDashboard() {
             ))}
           </div>
 
-          {/* Recent Incidents */}
+          {/* Recent Incidents (compact list) */}
           <div className="bg-gray-100 rounded-xl shadow-sm p-3 mt-6 mx-2">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-base font-semibold text-gray-800">Recent Incidents</h3>
@@ -321,51 +326,51 @@ export default function UserDashboard() {
               </div>
             )}
           </div>
-
-          {/* Full incidents view (optional) */}
-          {showIncidents && (
-            <div className="flex flex-col items-center justify-center min-h-[50vh]">
-              <div className="w-full max-w-md">
-                {/* You can adapt RecentIncidents to accept workspaceId instead of company */}
-                <RecentIncidents workspaceMode />
-                <div className="mt-4 flex justify-end">
-                  <button
-                    onClick={() => setShowIncidents(false)}
-                    className="text-sm font-medium text-blue-600 hover:underline"
-                  >
-                    Back to dashboard
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </>
       ) : (
-        // Notifications (hide the rest)
-        <NotificationCenter />
-      )}
-
-      {/* Bottom nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-4">
-        <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
-          <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <Home className="w-6 h-6" />
-            <span className="text-xs">Home</span>
-          </Link>
-          <Link to="/reports" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <FileText className="w-6 h-6" />
-            <span className="text-xs">Reports</span>
-          </Link>
-          <Link to="/chat" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <MessageSquare className="w-6 h-6" />
-            <span className="text-xs">Chats</span>
-          </Link>
-          <Link to="/profile" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <User className="w-6 h-6" />
-            <span className="text-xs">Profile</span>
-          </Link>
+        // Full incidents view
+        <div className="flex flex-col items-center justify-center min-h-[50vh] px-4">
+          <div className="w-full max-w-md">
+            <RecentNotifications workspaceId={workspaceId} />
+            <div className="mt-4 flex justify-end">
+              <button
+                onClick={() => setShowIncidents(false)}
+                className="text-sm font-medium text-blue-600 hover:underline"
+              >
+                Back to dashboard
+              </button>
+            </div>
+          </div>
         </div>
-      </nav>
+      )}
+    </>
+  ) : (
+    // Notifications (hide the rest)
+    <NotificationCenter />
+  )}
+
+  {/* Bottom nav (unchanged) */}
+  <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-4">
+    <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
+      <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+        <Home className="w-6 h-6" />
+        <span className="text-xs">Home</span>
+      </Link>
+      <Link to="/my-reports" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+        <FileText className="w-6 h-6" />
+        <span className="text-xs">Reports</span>
+      </Link>
+      <Link to="/chat" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+        <MessageSquare className="w-6 h-6" />
+        <span className="text-xs">Chats</span>
+      </Link>
+      <Link to="/profile" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+        <User className="w-6 h-6" />
+        <span className="text-xs">Profile</span>
+      </Link>
     </div>
+  </nav>
+</div>
+
   );
 }

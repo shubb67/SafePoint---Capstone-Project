@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { getAuth } from 'firebase/auth';
+import { getAuth, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '@/_utils/firebase';
 import { Mail, Phone, ArrowLeft, Bell } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import {
   Home as HomeIcon,
   FileText,
@@ -11,9 +11,10 @@ import {
   User
 } from "lucide-react";
 
-
 export default function ProfileScreen() {
   const [userData, setUserData] = useState(null);
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -29,12 +30,23 @@ export default function ProfileScreen() {
     fetchUser();
   }, []);
 
+  const handleConfirmSignOut = async () => {
+    try {
+      const auth = getAuth();
+      await signOut(auth);
+      setShowSignOutConfirm(false);
+      navigate('/login', { replace: true });
+    } catch (e) {
+      console.error('Sign out failed:', e);
+    }
+  };
+
   if (!userData) {
     return <div className="text-center mt-10">Loading...</div>;
   }
 
   return (
-    <div className="min-h-screen bg-white p-4">
+    <div className="min-h-screen bg-white p-4 pb-24 relative">
       {/* Header */}
       <div className="flex justify-between items-center mb-4">
         <ArrowLeft className="w-6 h-6 text-black" />
@@ -100,12 +112,23 @@ export default function ProfileScreen() {
           </div>
         </div>
 
-        <button className="w-full mt-4 p-3 rounded-xl bg-gray-100 text-blue-600 font-semibold" disabled>
+        {/* Buttons (match mockup spacing and colors) */}
+        <button
+          className="w-full mt-2 p-3 rounded-xl bg-blue-600 text-white font-semibold active:scale-[.99] transition"
+        >
           Change Password
+        </button>
+
+        <button
+          onClick={() => setShowSignOutConfirm(true)}
+          className="w-full p-3 rounded-xl bg-gray-100 text-gray-800 font-semibold active:scale-[.99] transition"
+        >
+          Sign Out
         </button>
       </div>
 
-<nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
+      {/* Bottom Nav */}
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200">
         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
           <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
             <HomeIcon className="w-6 h-6" />
@@ -125,6 +148,38 @@ export default function ProfileScreen() {
           </Link>
         </div>
       </nav>
+
+      {/* Sign Out Confirmation Modal */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          {/* Dim/blur overlay */}
+          <div
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+            onClick={() => setShowSignOutConfirm(false)}
+          />
+          {/* Modal card */}
+          <div className="relative z-10 w-11/12 max-w-sm bg-white rounded-2xl shadow-lg p-5">
+            <h3 className="text-lg font-semibold text-center text-black">Sign Out</h3>
+            <p className="mt-2 text-sm text-center text-gray-600">
+              Are you sure you want to sign out?
+            </p>
+            <div className="mt-4 space-y-2">
+              <button
+                onClick={handleConfirmSignOut}
+                className="w-full p-3 rounded-xl bg-blue-600 text-white font-semibold active:scale-[.99] transition"
+              >
+                Sign Out
+              </button>
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                className="w-full p-3 rounded-xl bg-gray-100 text-gray-800 font-semibold active:scale-[.99] transition"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

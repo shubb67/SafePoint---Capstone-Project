@@ -1,20 +1,25 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
-import { collection, getDocs } from "firebase/firestore";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  collection,
+  getDocs,
+  doc,
+  getDoc,
+  query,
+  where,
+} from "firebase/firestore";
 import { auth, db } from "@/_utils/firebase";
-import { useIncidentDispatch, useIncidentState } from "../../context/IncidentContext";
 import { Listbox } from "@headlessui/react";
 import { ChevronDown } from "lucide-react";
-import { doc, getDoc } from "firebase/firestore";
-import { query, where } from "firebase/firestore";
 
 export default function PersonalInfo() {
   const navigate = useNavigate();
-  const { state: previous } = useLocation();
-  const dispatch = useIncidentDispatch();
-  const incidentState = useIncidentState();
+  const params = useParams();
+  
+  // Get the report ID from URL params
+  const reportId = params?.id;
 
   // Form fields
   const [yourName, setYourName] = useState("");
@@ -24,76 +29,134 @@ export default function PersonalInfo() {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(false);
 
-
-  // Load users for dropdowns
-    useEffect(() => {
-      async function fetchRequestUsers() {
-        setLoadingUsers(true);
-        try {
-          const wsId = (await getDoc(doc(db, "users", auth.currentUser.uid))).data().workspaceId || data().currentWorkspace || "";
-            const snap = await getDocs(query(collection(db, "users"), where("workspaceId", "==", wsId)));
-            setUsers(snap.docs.map(d => ({ uid: d.id, ...d.data() })));     
-          
-        } catch (err) {
-          console.error("Error fetching users for dropdown", err);
-        } finally {
-          setLoadingUsers(false);
+  // Load users in same workspace
+  useEffect(() => {
+    async function fetchUsers() {
+      setLoadingUsers(true);
+      try {
+        const meUid = auth.currentUser?.uid;
+        if (!meUid) {
+          setUsers([]);
+          return;
         }
+        const meSnap = await getDoc(doc(db, "users", meUid));
+        const wsId = meSnap.exists() ? meSnap.data()?.workspaceId : null;
+        if (!wsId) {
+          setUsers([]);
+          return;
+        }
+        const snap = await getDocs(
+          query(collection(db, "users"), where("workspaceId", "==", wsId))
+        );
+        setUsers(snap.docs.map((d) => ({ uid: d.id, ...d.data() })));
+      } catch (err) {
+        console.error("Error fetching users for dropdown", err);
+        setUsers([]);
+      } finally {
+        setLoadingUsers(false);
       }
-      fetchRequestUsers();
-    }, []);
+    }
+    fetchUsers();
+  }, []);
+
+  // Load existing report data if available
+  useEffect(() => {
+    if (reportId) {
+      (async () => {
+        try {
+          const snap = await getDoc(doc(db, "reports", reportId));
+          if (!snap.exists()) return;
+          const pi = snap.data()?.personalInfo || {};
+          setYourName(pi.yourName || "");
+          setWasInjured(pi.wasInjured ? "yes" : "no");
+          setInjuredPersons(
+            Array.isArray(pi.injuredPersons)
+              ? pi.injuredPersons[0] || ""
+              : pi.injuredPersons || ""
+          );
+          setWitnesses(
+            Array.isArray(pi.witnesses) ? pi.witnesses[0] || "" : pi.witnesses || ""
+          );
+        } catch (e) {
+          console.error("Failed to load report personal info:", e);
+        }
+      })();
+    }
+  }, [reportId]);
 
   const handleBack = () => navigate(-1);
-  const handleNext = e => {
+
+  // Build payload
+  function buildPersonalPayload() {
+    return {
+      yourName,
+      wasInjured: wasInjured === "yes",
+      injuredPersons:
+        wasInjured === "yes" && injuredPersons ? [injuredPersons] : [],
+      witnesses: witnesses ? [witnesses] : [],
+    };
+  }
+
+  const handleNext = (e) => {
     e.preventDefault();
-    dispatch({
-      type: "SET_PERSONAL",
-      payload: { yourName, wasInjured, injuredPersons, witnesses },
-    });
-    navigate("/injury/incident-details", { state: previous });
+    
+    const payload = buildPersonalPayload();
+    
+    // Navigate back to incident report page with the payload
+    if (reportId) {
+      navigate(`/incident-report/${reportId}`, {
+        state: {
+          personalInfo: payload
+        }
+      });
+    }
   };
 
   const canProceed =
     yourName &&
     wasInjured &&
-    (wasInjured === "yes" ? injuredPersons : true) &&
+    (wasInjured === "yes" ? Boolean(injuredPersons) : true) &&
     witnesses;
 
-  // Helpers for selected user objects
-  const selectedUser = users.find(u => u.uid === yourName);
-  const selectedInjured = users.find(u => u.uid === injuredPersons);
-  const selectedWitness = users.find(u => u.uid === witnesses);
+  // Selected objects for nice Listbox renders
+  const selectedUser = users.find((u) => u.uid === yourName);
+  const selectedInjured = users.find((u) => u.uid === injuredPersons);
+  const selectedWitness = users.find((u) => u.uid === witnesses);
 
-  // Common Listbox Option render
-  const renderUserOption = u => (
+  // Shared option/button renderers
+  const renderUserOption = (u) => (
     <>
       <span className="absolute left-2 top-1.5 flex items-center">
-        {u.photoUrl
-          ? (
-            <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
-          )
-          : (
-            <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">
-              {u.firstName?.charAt(0) || "?"}
-            </div>
-          )}
+        {u.photoUrl ? (
+          <img src={u.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
+        ) : (
+          <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">
+            {u.firstName?.charAt(0) || "?"}
+          </div>
+        )}
       </span>
-      <span className="ml-10 block truncate">{u.firstName} {u.surname}</span>
+      <span className="ml-10 block truncate">
+        {u.firstName} {u.surname}
+      </span>
     </>
   );
 
-  // Common Listbox Button render
   function ListboxButtonContent(selectedObj, placeholder = "Select…") {
     return (
       <span className="flex items-center">
         {selectedObj ? (
           <>
-            {selectedObj.photoUrl
-              ? <img src={selectedObj.photoUrl} alt="" className="w-7 h-7 rounded-full mr-2" />
-              : <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">
-                  {selectedObj.firstName?.charAt(0) || "?"}
-                </div>
-            }
+            {selectedObj.photoUrl ? (
+              <img
+                src={selectedObj.photoUrl}
+                alt=""
+                className="w-7 h-7 rounded-full mr-2"
+              />
+            ) : (
+              <div className="w-7 h-7 bg-gray-200 rounded-full mr-2 flex items-center justify-center text-gray-500 font-bold">
+                {selectedObj.firstName?.charAt(0) || "?"}
+              </div>
+            )}
             <span className="block truncate text-black">
               {selectedObj.firstName} {selectedObj.surname}
             </span>
@@ -105,6 +168,7 @@ export default function PersonalInfo() {
     );
   }
 
+  // ===== UI =====
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-8 flex flex-col items-center">
       <div className="w-full max-w-lg">
@@ -135,13 +199,13 @@ export default function PersonalInfo() {
 
         {/* Subtitle */}
         <p className="text-center text-gray-600 text-sm mb-6 px-2">
-          To tailor SafePoint to your team, we just need a few details about the incident.
+          To tailor SafePoint to your team, we just need a few details about the
+          incident.
         </p>
 
         {/* Form */}
         <form onSubmit={handleNext} className="space-y-5">
-
-          {/* Your Name (Listbox) */}
+          {/* Your Name */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Your Name
@@ -156,20 +220,28 @@ export default function PersonalInfo() {
                 </Listbox.Button>
                 <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto bg-white py-1 shadow-lg ring-1 ring-opacity-5 focus:outline-none">
                   <Listbox.Option value="">
-                    <span className="block px-4 py-2 text-gray-400">Select…</span>
+                    <span className="block px-4 py-2 text-gray-400">
+                      Select…
+                    </span>
                   </Listbox.Option>
-                  {users.map(u => (
+                  {users.map((u) => (
                     <Listbox.Option
                       key={u.uid}
                       value={u.uid}
                       className={({ active }) =>
                         `relative cursor-pointer select-none py-2 pl-2 pr-4 ${
-                          active ? "bg-blue-100 text-blue-900" : "text-gray-900"
+                          active
+                            ? "bg-blue-100 text-blue-900"
+                            : "text-gray-900"
                         }`
                       }
                     >
                       {({ selected }) => (
-                        <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                        <span
+                          className={`block truncate ${
+                            selected ? "font-medium" : "font-normal"
+                          }`}
+                        >
                           {renderUserOption(u)}
                         </span>
                       )}
@@ -186,7 +258,7 @@ export default function PersonalInfo() {
               Was anyone injured?
             </label>
             <div className="flex gap-2">
-              {["yes", "no"].map(val => (
+              {["yes", "no"].map((val) => (
                 <button
                   key={val}
                   type="button"
@@ -204,7 +276,7 @@ export default function PersonalInfo() {
             </div>
           </div>
 
-          {/* Injured Person/s (Listbox) */}
+          {/* Injured Person/s */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Injured Person/s
@@ -233,20 +305,28 @@ export default function PersonalInfo() {
                 </Listbox.Button>
                 <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto bg-white py-1 shadow-lg ring-1 ring-opacity-5 focus:outline-none">
                   <Listbox.Option value="">
-                    <span className="block px-4 py-2 text-gray-400">Select…</span>
+                    <span className="block px-4 py-2 text-gray-400">
+                      Select…
+                    </span>
                   </Listbox.Option>
-                  {users.map(u => (
+                  {users.map((u) => (
                     <Listbox.Option
                       key={u.uid}
                       value={u.uid}
                       className={({ active }) =>
                         `relative cursor-pointer select-none py-2 pl-2 pr-4 ${
-                          active ? "bg-blue-100 text-blue-900" : "text-gray-900"
+                          active
+                            ? "bg-blue-100 text-blue-900"
+                            : "text-gray-900"
                         }`
                       }
                     >
                       {({ selected }) => (
-                        <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                        <span
+                          className={`block truncate ${
+                            selected ? "font-medium" : "font-normal"
+                          }`}
+                        >
                           {renderUserOption(u)}
                         </span>
                       )}
@@ -257,7 +337,7 @@ export default function PersonalInfo() {
             </Listbox>
           </div>
 
-          {/* Witness/es (Listbox) */}
+          {/* Witness/es */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Witness/es
@@ -272,20 +352,28 @@ export default function PersonalInfo() {
                 </Listbox.Button>
                 <Listbox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto bg-white py-1 shadow-lg ring-1 ring-opacity-5 focus:outline-none">
                   <Listbox.Option value="">
-                    <span className="block px-4 py-2 text-gray-400">Select…</span>
+                    <span className="block px-4 py-2 text-gray-400">
+                      Select…
+                    </span>
                   </Listbox.Option>
-                  {users.map(u => (
+                  {users.map((u) => (
                     <Listbox.Option
                       key={u.uid}
                       value={u.uid}
                       className={({ active }) =>
                         `relative cursor-pointer select-none py-2 pl-2 pr-4 ${
-                          active ? "bg-blue-100 text-blue-900" : "text-gray-900"
+                          active
+                            ? "bg-blue-100 text-blue-900"
+                            : "text-gray-900"
                         }`
                       }
                     >
                       {({ selected }) => (
-                        <span className={`block truncate ${selected ? "font-medium" : "font-normal"}`}>
+                        <span
+                          className={`block truncate ${
+                            selected ? "font-medium" : "font-normal"
+                          }`}
+                        >
                           {renderUserOption(u)}
                         </span>
                       )}

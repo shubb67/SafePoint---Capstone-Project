@@ -57,7 +57,9 @@ import WorkplaceLocations from "./DesktopView/CreateWorkspace/WorkplaceLocations
 import WorkplacePasscodes from "./DesktopView/CreateWorkspace/WorkplacePasscode";
 import WorkspaceCreated from "./DesktopView/CreateWorkspace/WorkspaceCreated";
 import AdminProfilePage from "./admin-dashboard/components/AdminProfile";
-import JoinWorkplace from "./user-onboarding/JoinWithPasscode";
+import JoinWithPasscode from "./DesktopView/JoinWorkspace/JoinWithPasscode";
+import EditPersonalInformation from "./user-dashboard/edit-report/EditPersonalInformation";
+import AdminPasscodeCheck from "./DesktopView/JoinWorkspace/AdminPasscodeCheck";
 function App() {
   if (typeof window === "undefined") {
     return null;
@@ -121,7 +123,11 @@ function App() {
       <Route path="/workplace-locations" element={<WorkplaceLocations />} />
       <Route path="/workplace-passcodes" element={<WorkplacePasscodes />} />
       <Route path="/workspace-created" element={<WorkspaceCreated />} />
-      <Route path="/join-with-passcode" element={<JoinWorkplace />} />
+      <Route path="/join-with-passcode" element={<JoinWithPasscode />} />
+      <Route path="/admin-passcode-check" element={<AdminPasscodeCheck />} />
+
+      <Route path="/incident/:id" element={<IncidentReportDetailMobile />} />
+      <Route path="/incident/:id/edit/personal" element={<EditPersonalInformation />} />
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

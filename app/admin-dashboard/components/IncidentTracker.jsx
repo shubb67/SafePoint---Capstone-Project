@@ -21,7 +21,7 @@ import {
   FileQuestion,
   ChevronDown,
 } from 'lucide-react';
-import { collection, getDocs, where, query, orderBy, doc, getDoc, updateDoc, serverTimestamp, addDoc, arrayUnion, Timestamp } from "firebase/firestore";
+import { collection, getDocs, where, query, orderBy, doc, getDoc, updateDoc, serverTimestamp, addDoc, arrayUnion, Timestamp, limit } from "firebase/firestore";
 import { db } from "@/_utils/firebase";
 import { getAuth } from "firebase/auth";
 import { Link } from 'react-router-dom';
@@ -38,7 +38,6 @@ import { signOut } from "firebase/auth";
 import { NavLink } from 'react-router-dom';
 import ImpactResponseCard from './ImpactResponseCard';
 import { onAuthStateChanged } from "firebase/auth";
-import { useCurrentWorkspace } from "./hooks/FetchWorkSpaceMeta";
 
 
 
@@ -84,9 +83,6 @@ const [message, setMessage] = useState('');
     };
   
   
-  
-  
-    useCurrentWorkspace(setCompanyName, setWorkspaceId);
   // Helper function to get the right icon for each incident type
 const getIncidentIcon = (type) => {
   switch(type) {
@@ -111,8 +107,8 @@ const getIncidentIcon = (type) => {
   if (!recipientUid) return;
   await addDoc(collection(db, "notifications"), {
     userId: recipientUid,                   // who will see it
-    company: companyName || "", 
-    workspaceId: workspaceId || "",        // optional
+    company: payload.company ?? companyName ?? "",
+      workspaceId: payload.workspaceId ?? workspaceId ?? "",       // optional
     title: payload.title || "Notification",
     message: payload.message || "",
     type: payload.type || "update",         // "report" | "update" | "status" | "infoRequest"
@@ -164,10 +160,11 @@ const handleSendNotification = () => {
         infoRequests: arrayUnion(requestEntry)
       });
       
-       // 2) Drop a notification (keep your broadcast in `notify/` untouched)
-       await addDoc(collection(db, 'notifications'), {
+       // 2) Drop a notification 
+       await addDoc(collection(db, "workspaces", workspaceId, "requestingInfo"), {
          type: 'infoRequest',
       company: companyName,
+      workspaceId,
       incidentId,
       toUserId: selectedUser,
       fromUserId: currentUser.uid,
@@ -263,6 +260,7 @@ function asUidArray(val) {
       const reporterUid = asUidArray(incidentData?.personalInfo?.yourName)?.[0] || null;
       await sendNotification(reporterUid, {
         company: companyName,
+        workspaceId,
         type: "review",
         title: "Your Report Was Assigned for Review",
         message: `Your ${getIncidentTypeTitle(incidentData?.incidentType)} has been sent to ${adminName || 'Admin'} for Review.`,
@@ -334,6 +332,7 @@ function asUidArray(val) {
       const reporterUid = asUidArray(incidentData?.personalInfo?.yourName)?.[0] || null;
 await sendNotification(reporterUid, {
   company: companyName,
+  workspaceId,
   type: "rejected",
   title: "Your Report Was Rejected",
   message: `Reason: ${rejectionReason}`,
@@ -447,105 +446,121 @@ await sendNotification(reporterUid, {
        }
  }, [incidentData]);
 
-  useEffect(() => {
-  async function fetchRequestUsers() {
-    if (!companyName || companyName === "..." || !incidentData) return;
-
-    // Step 1: Build involved user IDs list
-const involvedUserIds = [
-  ...asUidArray(incidentData?.personalInfo?.yourName),
-  ...asUidArray(incidentData?.personalInfo?.injuredPersons),
-  ...asUidArray(incidentData?.personalInfo?.witnesses)
-].filter(Boolean);
-
-    const uniqueInvolvedUserIds = [...new Set(involvedUserIds)].filter(Boolean);
-    if (!uniqueInvolvedUserIds.length) {
-      setRequestUserOptions([]);
-      return;
-    }
-
-    // Step 2: Fetch those users in company
-    // We fetch by UID (Firestore doc ID), then filter by company
-    const userPromises = uniqueInvolvedUserIds.map(uid =>
-      getDoc(doc(db, "users", uid))
-    );
-    const userSnaps = await Promise.all(userPromises);
-    const users = userSnaps
-      .filter(snap => snap.exists() && snap.data().company === companyName)
-      .map(snap => {
-        const d = snap.data();
-        return {
-          uid: snap.id,
-          firstName: d.firstName || '',
-          lastName: d.surname || '',
-          photoUrl: d.photoUrl || '',
-          email: d.email || '',
-        };
-      });
-    setRequestUserOptions(users);
-  }
-  fetchRequestUsers();
-}, [companyName, incidentData]);
-
-
-  // Fetch organization data including locations
-  useEffect(() => {
-    (async () => {
-      try {
-        setIsLoading(true);
-        const auth = getAuth();
-        const currentUser = auth.currentUser;
-        if (!currentUser) {
-          setIsLoading(false);
+    useEffect(() => {
+      async function fetchRequestUsers() {
+        if (!workspaceId || !incidentData) return;
+    
+        // 1) Build involved user IDs list
+        const involvedUserIds = [
+          ...asUidArray(incidentData?.personalInfo?.yourName),
+          ...asUidArray(incidentData?.personalInfo?.injuredPersons),
+          ...asUidArray(incidentData?.personalInfo?.witnesses),
+        ].filter(Boolean);
+    
+        const uniqueInvolvedUserIds = [...new Set(involvedUserIds)];
+        if (!uniqueInvolvedUserIds.length) {
+          setRequestUserOptions([]);
           return;
         }
-
-        // Get current admin's data first
-        const adminSnap = await getDocs(query(collection(db, "users"), where("__name__", "==", currentUser.uid)));
-        const admin = adminSnap.docs[0]?.data();
-        const adminCompany = admin?.company;
-        
-        setAdminName(admin?.firstName || "Admin");
-        setCompanyName(adminCompany || "Company Name");
-        setCompanySiteLocation(admin?.siteLocation || "Main Office");
-        setCompanyPhotoUrl(admin?.photoUrl || "");
-
-        if (!adminCompany) {
-          console.warn("Admin company not found, cannot fetch organization data");
-          setIsLoading(false);
-          return;
-        }
-
-        // Get all users from the company
-        const orgUsersSnap = await getDocs(query(collection(db, "users"), where("company", "==", adminCompany)));
-        const orgUserIds = orgUsersSnap.docs.map(doc => doc.id);
-
-        if (orgUserIds.length === 0) {
-          setIsLoading(false);
-          return;
-        }
-
-        // Fetch incidents from all users in the organization
-        const incidentsSnap = await getDocs(
-          query(
-            collection(db, "reports"),
-            where("userId", "in", orgUserIds.slice(0, 10)),
-            orderBy("createdAt", "desc")
-          )
+    
+        // 2) Fetch each user by UID and keep only those in the SAME workspace
+        const userSnaps = await Promise.all(
+          uniqueInvolvedUserIds.map((uid) => getDoc(doc(db, "users", uid)))
         );
-        const incidents = incidentsSnap.docs.map(doc => ({
-          id: doc.id, 
-          ...doc.data()
-        }));
-            
-      } catch (error) {
-        console.error("Error fetching organization data:", error);
+    
+        const users = userSnaps
+          .filter(
+            (snap) => snap.exists() && (snap.data()?.workspaceId || "") === workspaceId
+          )
+          .map((snap) => {
+            const d = snap.data() || {};
+            return {
+              uid: snap.id,
+              firstName: d.firstName || "",
+              lastName: d.surname || "",       // keep your existing field
+              photoUrl: d.photoUrl || "",
+              email: d.email || "",
+            };
+          });
+    
+        setRequestUserOptions(users);
       }
-      finally {
+    
+      fetchRequestUsers();
+    }, [workspaceId, incidentData]);
+    
+
+  // Fetch workspace data including locations (workspace-based)
+useEffect(() => {
+  (async () => {
+    try {
+      setIsLoading(true);
+
+      const currentUser = getAuth().currentUser;
+      if (!currentUser) {
         setIsLoading(false);
+        return;
       }
-    })();
-  }, []);
+
+      // 1) Read the user to get workspaceId
+      const userSnap = await getDoc(doc(db, "users", currentUser.uid));
+      const userData = userSnap.exists() ? userSnap.data() : null;
+
+      const wsId = userData?.workspaceId || userData?.currentWorkspace || null;
+      setAdminName(userData?.firstName || "Admin");
+      setCompanyPhotoUrl(userData?.photoUrl || "");
+      setWorkspaceId(wsId);
+
+      if (!wsId) {
+        console.warn("No workspaceId on user; cannot fetch workspace data");
+        setCompanyName("Workspace");
+        setIsLoading(false);
+        return;
+      }
+
+      // 2) Fetch the workspace doc for display name/site/etc.
+      const wsSnap = await getDoc(doc(db, "workspaces", wsId));
+
+      if (wsSnap.exists()) {
+        const ws = wsSnap.data();
+        setCompanyName(ws?.name || ws?.companyName || "Workspace");
+        // Prefer a site field on workspace if present, otherwise keep user site
+        setCompanySiteLocation(ws?.companyLocation || ws?.siteLocation || userData?.siteLocation || "Main Office");
+      } else {
+        setCompanyName("Workspace");
+      }
+
+      // 3) Pull incidents directly by workspaceId (new storage shape)
+      const incidentsSnap = await getDocs(
+        query(
+          collection(db, "reports"),
+          where("workspaceId", "==", wsId),
+          orderBy("createdAt", "desc"),
+          limit(50)
+        )
+      );
+
+      // 4) Build locations list (unique strings) from the reports
+      const uniqueLocations = new Set();
+      incidentsSnap.docs.forEach((d) => {
+        const data = d.data();
+        const loc = data?.incidentDetails?.location;
+        if (loc && typeof loc === "string") uniqueLocations.add(loc);
+      });
+      setAllOrgLocations(Array.from(uniqueLocations));
+
+      // If you also keep a local incidents array here, you can set it too:
+      // const incidents = incidentsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      // setIncidents(incidents);
+
+    } catch (error) {
+      console.error("Error fetching workspace data:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  })();
+}, []);
+
 
   // Fetch incident data when component mounts or incidentId changes
   useEffect(() => {
@@ -659,6 +674,7 @@ const involvedUserIds = [
         company: companyName,
         type: "status",
         title: "Your Report Was Closed",
+        workspaceId: workspaceId,
         message: "The incident has been resolved and the report is now closed.",
         relatedReportId: incidentId,
         extra: { newStatus: "closed" },

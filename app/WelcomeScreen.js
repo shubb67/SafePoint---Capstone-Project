@@ -10,13 +10,13 @@ export default function SignUpLanding() {
   const navigate = useNavigate();
   const isDesktop = useIsDesktop(1024); // desktop if ≥ 1024px or UA says non‑mobile
 
-  // useEffect(() => {
-  //   if (isDesktop) {
-  //     navigate("/sign-up", { replace: true });
-  //   }
-  // }, [isDesktop, navigate]);
+  useEffect(() => {
+    if (isDesktop) {
+      navigate("/sign-up", { replace: true });
+    }
+  }, [isDesktop, navigate]);
 
-  // if (isDesktop) return null;
+  if (isDesktop) return null;
   return (
     <div className="min-h-dvh w-full bg-white flex items-stretch justify-center">
       <div className="w-full max-w-[480px] mx-auto flex flex-col h-dvh">

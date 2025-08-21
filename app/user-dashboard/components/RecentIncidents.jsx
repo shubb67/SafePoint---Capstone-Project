@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
-import { collection, query, orderBy, limit, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  orderBy,
+  limit,
+  onSnapshot,
+  doc,
+  getDoc,
+} from "firebase/firestore";
 import { db } from "@/_utils/firebase";
+import { getAuth } from "firebase/auth";
+
 import injuryIcon from "../../assets/image/injury.png";
 import hazardIcon from "../../assets/image/safety-hazards.png";
 import nearMissIcon from "../../assets/image/danger.png";
 import propertyIcon from "../../assets/image/property-damage.png";
 
-const imgUrl = img => (img && (img.src || img.default)) || img || "";
+const imgUrl = (img) => (img && (img.src || img.default)) || img || "";
 const incidentTypeIcons = {
   injury: injuryIcon,
   safetyHazard: hazardIcon,
@@ -17,7 +27,8 @@ const incidentTypeIcons = {
 function timeAgo(date) {
   if (!date) return "";
   const now = new Date();
-  const then = typeof date === "object" && date.toDate ? date.toDate() : new Date(date);
+  const then =
+    typeof date === "object" && date.toDate ? date.toDate() : new Date(date);
   const seconds = Math.floor((now - then) / 1000);
   const minutes = Math.floor(seconds / 60);
   const hours = Math.floor(minutes / 60);
@@ -28,37 +39,64 @@ function timeAgo(date) {
   return "Just now";
 }
 
-export default function RecentNotifications({ userCompany }) {
-  const [incidents, setIncidents] = useState([]);
+/**
+ * Props:
+ * - workspaceId (optional): if omitted, the component will fetch it from the
+ *   current user's document (users/{uid}.workspaceId)
+ */
+export default function RecentNotifications({ workspaceId: propWorkspaceId }) {
+  const [workspaceId, setWorkspaceId] = useState(propWorkspaceId || null);
+  const [items, setItems] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
 
+  // Resolve workspaceId if not passed in
   useEffect(() => {
-    if (!userCompany) return;
-      setIsLoading(true);
+    let mounted = true;
+    async function resolveWs() {
+      if (propWorkspaceId) {
+        setWorkspaceId(propWorkspaceId);
+        return;
+      }
+      const user = getAuth().currentUser;
+      if (!user) return;
+      const snap = await getDoc(doc(db, "users", user.uid));
+      if (!mounted) return;
+      const data = snap.exists() ? snap.data() : null;
+      setWorkspaceId(data?.workspaceId || null);
+    }
+    resolveWs();
+    return () => {
+      mounted = false;
+    };
+  }, [propWorkspaceId]);
 
-     // NEW PATH: notification/{company}/notify
+  // Subscribe to workspace notifications
+  useEffect(() => {
+    if (!workspaceId) return;
+    setIsLoading(true);
+
     const q = query(
-      collection(db, "notification", userCompany, "notify"),
+      collection(db, "workspaces", workspaceId, "notify"),
       orderBy("createdAt", "desc"),
       limit(10)
     );
 
-    const unsubscribe = onSnapshot(
+    const unsub = onSnapshot(
       q,
       (snapshot) => {
-        const items = snapshot.docs.map((doc) => {
-          const data = doc.data();
-
-          const loc = data.location || "Unknown Location";
+        const next = snapshot.docs.map((d) => {
+          const data = d.data();
+          const locName = data.locationName || data.location || "Unknown Location";
           const t = data.incidentType;
-          let title = `Incident in ${loc}`;
-          if (t === "injury") title = `Injury Reported in ${loc}`;
-          else if (t === "safetyHazard") title = `Safety Hazard in ${loc}`;
-          else if (t === "nearMiss") title = `Near Miss in ${loc}`;
-          else if (t === "propertyDamage") title = `Property Damage in ${loc}`;
+          let title = `Incident in ${locName}`;
+          if (t === "injury") title = `Injury Reported in ${locName}`;
+          else if (t === "safetyHazard") title = `Safety Hazard in ${locName}`;
+          else if (t === "nearMiss") title = `Near Miss in ${locName}`;
+          else if (t === "propertyDamage")
+            title = `Property Damage in ${locName}`;
 
           return {
-            id: doc.id,
+            id: d.id,
             iconSrc: incidentTypeIcons[t] || propertyIcon,
             title,
             description: data.notifyMessage || "No description provided.",
@@ -66,30 +104,34 @@ export default function RecentNotifications({ userCompany }) {
             isNew: data.status === "active",
           };
         });
-
-        setIncidents(items);
+        setItems(next);
         setIsLoading(false);
       },
-      (error) => {
-        console.error("Failed to fetch notifications:", error);
+      (err) => {
+        console.error("Failed to fetch workspace notifications:", err);
+        setItems([]);
         setIsLoading(false);
       }
     );
 
-    return () => unsubscribe();
-  }, [userCompany]);
+    return () => unsub();
+  }, [workspaceId]);
 
   return (
     <div className="bg-white rounded-xl shadow-sm p-4 min-w-[330px]">
-      <h3 className="text-lg font-semibold text-gray-800 mb-4">Recent Incidents</h3>
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">
+        Recent Incidents
+      </h3>
       <hr className="border-gray-200 mb-4" />
       {isLoading ? (
         <div className="text-center text-gray-500 py-8">Loading...</div>
-      ) : incidents.length === 0 ? (
-        <div className="text-center text-gray-500 py-8">No notifications found.</div>
+      ) : items.length === 0 ? (
+        <div className="text-center text-gray-500 py-8">
+          No notifications found.
+        </div>
       ) : (
         <div className="divide-y divide-gray-200">
-          {incidents.map(({ id, iconSrc, title, description, time, isNew }) => (
+          {items.map(({ id, iconSrc, title, description, time, isNew }) => (
             <div key={id} className="flex items-start py-4">
               <div className="flex-none">
                 <img
@@ -100,10 +142,14 @@ export default function RecentNotifications({ userCompany }) {
               </div>
               <div className="ml-3 flex-1 min-w-0">
                 <p className="text-sm font-semibold text-gray-900">{title}</p>
-                <p className="text-sm text-gray-500 mt-1 line-clamp-2">{description}</p>
+                <p className="text-sm text-gray-500 mt-1 line-clamp-2">
+                  {description}
+                </p>
                 <p className="text-xs text-gray-400 mt-2">{time}</p>
               </div>
-              {isNew && <span className="ml-2 mt-1 h-2 w-2 bg-yellow-400 rounded-full" />}
+              {isNew && (
+                <span className="ml-2 mt-1 h-2 w-2 bg-yellow-400 rounded-full" />
+              )}
             </div>
           ))}
         </div>

@@ -36,7 +36,7 @@ export default function UserOnboarded() {
   };
 
   const handleJoinWorkspace = () => {
-    navigate("/join-workspace");
+    navigate("/join-with-passcode");
   };
 
   if (loading) {

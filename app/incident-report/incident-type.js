@@ -171,7 +171,7 @@ export default function IncidentType() {
     disabled={!selectedType}
     className={`w-full py-4 rounded-lg font-medium text-lg transition-all ${
       selectedType
-        ? "bg-gray-800 text-white hover:bg-gray-700"
+        ? "bg-[#3B82F6] text-white hover:bg-gray-700"
         : "bg-gray-200 text-gray-400 cursor-not-allowed"
     }`}
   >

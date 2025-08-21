@@ -34,12 +34,10 @@ function timeAgo(ts) {
 
 function TypeIcon({ type }) {
   if (type === "report") return <CheckCircle2 className="w-5 h-5 text-blue-600" />;
-
   if (type === "update") return <Info className="w-5 h-5 text-slate-500" />;
   if (type === "status") return <CheckCircle2 className="w-5 h-5 text-green-600" />;
-
   if (type === "rejected") return <AlertTriangle className="w-5 h-5 text-red-600" />;
-if (type === "review") return <AlertTriangle className="w-5 h-5 text-amber-500" />;
+  if (type === "review") return <AlertTriangle className="w-5 h-5 text-amber-500" />;
   if (type === "infoRequest" || type === "requestMoreInfo")
     return <AlertTriangle className="w-5 h-5 text-amber-500" />;
   return <Bell className="w-5 h-5 text-slate-400" />;
@@ -71,12 +69,10 @@ function isUnread(n, uid) {
   const statusUnread = (n.status || "").toLowerCase() === "unread";
   const boolFlags = n.isRead === false || n.read === false;
   const notInReadBy = Array.isArray(n.readBy) ? !n.readBy.includes(uid) : true;
-  // if any flag explicitly says read, treat as read
-  const explicitlyRead = n.isRead === true || n.read === true || (n.status || "").toLowerCase() === "read";
+  const explicitlyRead =
+    n.isRead === true || n.read === true || (n.status || "").toLowerCase() === "read";
   if (explicitlyRead) return false;
-  // for broadcasts (readBy array)
   if (Array.isArray(n.readBy)) return notInReadBy;
-  // fallback to status/bools
   return statusUnread || boolFlags;
 }
 
@@ -85,25 +81,40 @@ export default function NotificationCenter() {
   const auth = getAuth();
   const uid = auth.currentUser?.uid;
 
-  const [company, setCompany] = useState(null);
+  // workspace-first state
+  const [workspaceId, setWorkspaceId] = useState(null);
+  const [workspaceName, setWorkspaceName] = useState("");
+
+  // UI filters
   const [tab, setTab] = useState("all"); // "all" | "unread" | "reports"
   const [search, setSearch] = useState("");
 
+  // streams
   const [personalToUser, setPersonalToUser] = useState([]);
   const [personalUserId, setPersonalUserId] = useState([]);
   const [personalRecipient, setPersonalRecipient] = useState([]);
-  const [orgBroadcasts, setOrgBroadcasts] = useState([]);
+  const [wsNotify, setWsNotify] = useState([]); // workspaces/{workspaceId}/notify
+  const [wsRequestingInfo, setWsRequestingInfo] = useState([]); // workspaces/{workspaceId}/requestingInfo
 
-  // fetch user's company once
+  // 1) Get user's workspace once
   useEffect(() => {
     (async () => {
       if (!uid) return;
       const u = await getDoc(doc(db, "users", uid));
-      setCompany(u.exists() ? u.data()?.company || null : null);
+      if (u.exists()) {
+        const data = u.data();
+        const wid = data?.workspaceId || data.currentWorkspace || null;
+        setWorkspaceId(wid);
+        if (wid) {
+          const wsSnap = await getDoc(doc(db, "workspaces", wid));
+          if (wsSnap.exists()) setWorkspaceName(wsSnap.data()?.name || "");
+        }
+      }
     })();
   }, [uid]);
 
-  // personal: toUserId == uid
+  // 2) Personal notifications in root /notifications
+  //    a) toUserId == uid
   useEffect(() => {
     if (!uid) return;
     const q1 = query(
@@ -112,11 +123,15 @@ export default function NotificationCenter() {
       orderBy("createdAt", "desc")
     );
     return onSnapshot(q1, (snap) => {
-      setPersonalToUser(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setPersonalToUser(snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        _src: { kind: "root", path: ["notifications", d.id] },
+      })));
     });
   }, [uid]);
 
-  // personal (legacy): userId == uid
+  //    b) legacy: userId == uid
   useEffect(() => {
     if (!uid) return;
     const q2 = query(
@@ -125,11 +140,15 @@ export default function NotificationCenter() {
       orderBy("createdAt", "desc")
     );
     return onSnapshot(q2, (snap) => {
-      setPersonalUserId(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setPersonalUserId(snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        _src: { kind: "root", path: ["notifications", d.id] },
+      })));
     });
   }, [uid]);
 
-  // personal (legacy alt): recipientId == uid
+  //    c) legacy alt: recipientId == uid
   useEffect(() => {
     if (!uid) return;
     const q3 = query(
@@ -138,28 +157,58 @@ export default function NotificationCenter() {
       orderBy("createdAt", "desc")
     );
     return onSnapshot(q3, (snap) => {
-      setPersonalRecipient(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
+      setPersonalRecipient(snap.docs.map((d) => ({
+        id: d.id,
+        ...d.data(),
+        _src: { kind: "root", path: ["notifications", d.id] },
+      })));
     });
   }, [uid]);
 
-  // broadcasts: company == user's company (some docs have no toUserId, and a readBy array)
+  // 4) Workspace info-requests: workspaces/{workspaceId}/requestingInfo
   useEffect(() => {
-    if (!company) return;
-    const qOrg = query(
-      collection(db, "notifications"),
-      where("company", "==", company),
+    if (!workspaceId) return;
+    const qReq = query(
+      collection(db, "workspaces", workspaceId, "requestingInfo"),
       orderBy("createdAt", "desc")
     );
-    return onSnapshot(qOrg, (snap) => {
-      setOrgBroadcasts(snap.docs.map((d) => ({ id: d.id, ...d.data() })));
-    });
-  }, [company]);
+    return onSnapshot(
+      qReq,
+      (snap) => {
+        setWsRequestingInfo(
+          snap.docs.map((d) => {
+            const data = d.data();
+            return {
+              id: d.id,
+              type: "infoRequest",
+              title: data.title || null,
+              message: data.message || data.text || "",
+              incidentId: data.incidentId || null,
+              createdAt: data.createdAt || null,
+              readBy: Array.isArray(data.readBy) ? data.readBy : [],
+              status: data.status || "unread",
+              isRead: data.isRead ?? false,
+              read: data.read ?? false,
+              _src: { kind: "workspace", path: ["workspaces", workspaceId, "requestingInfo", d.id] },
+            };
+          })
+        );
+      },
+      (err) => console.error("requestingInfo snapshot error", err)
+    );
+  }, [workspaceId]);
 
-  // merge, de-dupe, sort
+  // 5) Merge, de-dupe, sort
   const allItems = useMemo(() => {
     const map = new Map();
-    [...personalToUser, ...personalUserId, ...personalRecipient, ...orgBroadcasts].forEach((n) => {
-      map.set(n.id, n);
+    [
+      ...personalToUser,
+      ...personalUserId,
+      ...personalRecipient,
+      ...wsNotify,
+      ...wsRequestingInfo,
+    ].forEach((n) => {
+      map.set(`${n._src?.path?.join("/")}`, n);
     });
     const arr = Array.from(map.values());
     arr.sort((a, b) => {
@@ -168,8 +217,9 @@ export default function NotificationCenter() {
       return tb - ta;
     });
     return arr;
-  }, [personalToUser, personalUserId, personalRecipient, orgBroadcasts]);
+  }, [personalToUser, personalUserId, personalRecipient, wsNotify, wsRequestingInfo]);
 
+  // 6) Filters
   const filtered = useMemo(() => {
     let list = allItems;
     if (tab === "unread") list = list.filter((n) => isUnread(n, uid));
@@ -186,14 +236,17 @@ export default function NotificationCenter() {
     return list;
   }, [allItems, tab, search, uid]);
 
-  const markAsRead = async (id) => {
+  // 7) Mark as read across sources
+  const markAsRead = async (n) => {
     try {
-      if (!id || !uid) return;
-      await updateDoc(fsDoc(db, "notifications", id), {
+      if (!n || !uid || !n._src?.path) return;
+      const p = n._src.path; // e.g. ["workspaces", wid, "notify", id] OR ["notifications", id]
+      const ref = fsDoc(db, ...p);
+      await updateDoc(ref, {
         status: "read",
         isRead: true,
         read: true,
-        readBy: arrayUnion(uid), // for broadcast-style docs
+        readBy: arrayUnion(uid),
       });
     } catch (e) {
       console.error("markAsRead error", e);
@@ -258,7 +311,7 @@ export default function NotificationCenter() {
         ) : (
           <ul className="divide-y divide-gray-200">
             {filtered.map((n) => (
-              <li key={n.id} className="py-4">
+              <li key={n._src?.path?.join("/") || n.id} className="py-4">
                 <div className="flex items-start gap-3">
                   <div className="flex-none mt-0.5">
                     <div className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center">
@@ -286,20 +339,27 @@ export default function NotificationCenter() {
                       {n.incidentId ? (
                         <Link
                           to={`/incident-report/${n.incidentId}`}
-                          onClick={() => markAsRead(n.id)}
+                          onClick={() => markAsRead(n)}
                           className="text-xs font-semibold px-3 py-1 rounded-lg bg-blue-600 text-white hover:bg-blue-700"
                         >
                           View
                         </Link>
                       ) : (
                         <button
-                          onClick={() => markAsRead(n.id)}
+                          onClick={() => markAsRead(n)}
                           className="text-xs font-semibold px-3 py-1 rounded-lg bg-gray-800 text-white hover:bg-black"
                         >
                           Got it
                         </button>
                       )}
                     </div>
+
+                    {/* tiny source hint (optional) */}
+                    {workspaceName && n._src?.kind === "workspace" && (
+                      <div className="mt-1 text-[11px] text-gray-400">
+                        From workspace: {workspaceName}
+                      </div>
+                    )}
                   </div>
                 </div>
               </li>
