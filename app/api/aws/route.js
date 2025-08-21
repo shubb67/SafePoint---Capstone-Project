@@ -1,4 +1,13 @@
+// app/api/aws/route.js
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
+
+// ---------- HARD-CODE TEST VALUES (TEMPORARY!) ----------
+const AWS_REGION           = "us-east-2";            // e.g., "us-east-1"
+const AWS_S3_BUCKET        = "safepoint-sait";       // e.g., "safepoint-sait"
+const AWS_ACCESS_KEY_ID    = "AKIAVW66666666666666";
+const AWS_SECRET_ACCESS_KEY= "abHqNOQEe3KcMvtcJvo0jNMoyjl4y7NVvVl21vVc";
+// const USE_PUBLIC_READ   = false; // set to true ONLY if bucket policy allows and BPA is off
+// --------------------------------------------------------
 
 // Force Node runtime (Buffer/AWS SDK need this in prod)
 export const runtime = "nodejs";
@@ -22,22 +31,22 @@ export async function POST(req) {
       // FormData path (no base64 bloat)
       const form = await req.formData();
       const file = form.get("file");
-      fileName = form.get("fileName");
-      fileType = form.get("fileType");
-      incidentType = form.get("incidentType");
-      category = form.get("category");
-      step = form.get("step");
-      folderPath = form.get("folderPath");
-      const arr = await file.arrayBuffer();
-      buffer = Buffer.from(arr);
+      fileName    = form.get("fileName");
+      fileType    = form.get("fileType");
+      incidentType= form.get("incidentType");
+      category    = form.get("category");
+      step        = form.get("step");
+      folderPath  = form.get("folderPath");
+      const arr   = await file.arrayBuffer();
+      buffer      = Buffer.from(arr);
     } else {
       // JSON path (base64)
       const body = await req.json();
-      ({ fileName, fileType, base64: body.base64, incidentType, category, step, folderPath } = body);
+      ({ fileName, fileType, incidentType, category, step, folderPath } = body);
       buffer = toBufferFromMaybeDataUrl(body.base64);
     }
 
-    // Validate
+    // Validate inputs
     if (
       !fileName || !fileType || !buffer ||
       (!folderPath && (!incidentType || !category || !step))
@@ -45,44 +54,30 @@ export async function POST(req) {
       return new Response(JSON.stringify({ error: "Missing upload fields" }), { status: 400 });
     }
 
-    // ENV: support either name in prod
-    const bucket = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET;
-    const region = process.env.AWS_REGION;
+    // Build S3 client from hardcoded values
+    const s3 = new S3Client({
+      region: AWS_REGION,
+      credentials: {
+        accessKeyId: AWS_ACCESS_KEY_ID,
+        secretAccessKey: AWS_SECRET_ACCESS_KEY,
+      },
+    });
+
     const key = folderPath
       ? `${folderPath}/${Date.now()}_${fileName}`
       : `incidentReport/${incidentType}/${step}/${category}/${Date.now()}_${fileName}`;
 
-    if (!bucket || !region || !process.env.AWS_ACCESS_KEY_ID || !process.env.AWS_SECRET_ACCESS_KEY) {
-      return new Response(JSON.stringify({
-        error: "Missing AWS server env vars.",
-        missing: {
-          AWS_S3_BUCKET_or_S3_BUCKET: !bucket,
-          AWS_REGION: !region,
-          AWS_ACCESS_KEY_ID: !process.env.AWS_ACCESS_KEY_ID,
-          AWS_SECRET_ACCESS_KEY: !process.env.AWS_SECRET_ACCESS_KEY
-        }
-      }), { status: 500 });
-    }
-
-    const s3 = new S3Client({
-      region,
-      credentials: {
-        accessKeyId: process.env.AWS_ACCESS_KEY_ID,
-        secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
-      }
-    });
-
     const put = new PutObjectCommand({
-      Bucket: bucket,
+      Bucket: AWS_S3_BUCKET,
       Key: key,
       Body: buffer,
       ContentType: fileType,
-      // ACL: "public-read", // only if you need public objects and bucket allows it
+      // ACL: USE_PUBLIC_READ ? "public-read" : undefined,
     });
 
     const result = await s3.send(put);
 
-    const url = `https://${bucket}.s3.${region}.amazonaws.com/${encodeURIComponent(key)}`;
+    const url = `https://${AWS_S3_BUCKET}.s3.${AWS_REGION}.amazonaws.com/${encodeURIComponent(key)}`;
     return new Response(JSON.stringify({
       ok: true,
       url,
