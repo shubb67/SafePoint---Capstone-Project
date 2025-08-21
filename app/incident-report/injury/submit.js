@@ -10,6 +10,7 @@ import { getDoc, doc } from "firebase/firestore";
 
 
 
+
 export default function ReportSubmitted() {
   const navigate = useNavigate();
   const incident = useIncidentState();

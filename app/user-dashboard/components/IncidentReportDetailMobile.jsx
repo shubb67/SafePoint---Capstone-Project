@@ -540,11 +540,11 @@ export default function IncidentReportDetailMobile() {
         
         {/* AI Summary */}
         <div className="bg-white rounded-lg px-3 py-2 mb-4">
-          <div className="text-xs text-gray-800 font-medium mb-1">AI Summary</div>
+          <div className="text-[13px] font-semibold text-gray-900">AI Summary</div>
           <div className="text-sm text-gray-600 leading-snug">
             {displayIncident.incidentDetails?.description || "-"}
           </div>
-          <a href="#" className="text-blue-700 text-xs font-medium mt-1 block text-right">
+          <a href="#" className="text-[13px] font-semibold text-blue-600 hover:text-blue-700">
             View Full Description
           </a>
         </div>
@@ -575,7 +575,7 @@ export default function IncidentReportDetailMobile() {
             "Minimal"
           }
           summary={
-            displayIncident?.impactInfo?.actionsSummary ||
+            displayIncident?.impactInfo?.responseAction ||
             displayIncident?.incidentDetails?.description ||
             ""
           }
@@ -648,27 +648,28 @@ export default function IncidentReportDetailMobile() {
         </div>
       )}
 
-      {/* Bottom Nav */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 py-4 px-3">
-        <div className="max-w-lg mx-auto flex justify-between px-2 py-1">
-          <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <Home className="w-6 h-6" />
-            <span className="text-xs">Home</span>
-          </Link>
-          <button className="flex flex-col items-center text-[#192C63]">
-            <FileText className="w-6 h-6" />
-            <span className="text-xs">Reports</span>
-          </button>
-          <button className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <MessageSquare className="w-6 h-6" />
-            <span className="text-xs">Chats</span>
-          </button>
-          <button className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
-            <User className="w-6 h-6" />
-            <span className="text-xs">Profile</span>
-          </button>
-        </div>
-      </nav>
+     
+       {/* Bottom nav (unchanged) */}
+       <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 pb-4">
+         <div className="max-w-lg mx-auto flex justify-between px-8 py-3">
+           <Link to="/user-dashboard" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+             <Home className="w-6 h-6" />
+             <span className="text-xs">Home</span>
+           </Link>
+           <Link to="/my-reports" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+             <FileText className="w-6 h-6" />
+             <span className="text-xs">Reports</span>
+           </Link>
+           <Link to="/workspace-chat" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+             <MessageSquare className="w-6 h-6" />
+             <span className="text-xs">Chats</span>
+           </Link>
+           <Link to="/profile" className="flex flex-col items-center text-gray-500 hover:text-[#192C63]">
+             <User className="w-6 h-6" />
+             <span className="text-xs">Profile</span>
+           </Link>
+         </div>
+       </nav>
     </div>
   );
 }

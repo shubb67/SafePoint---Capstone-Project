@@ -60,6 +60,7 @@ import AdminProfilePage from "./admin-dashboard/components/AdminProfile";
 import JoinWithPasscode from "./DesktopView/JoinWorkspace/JoinWithPasscode";
 import EditPersonalInformation from "./user-dashboard/edit-report/EditPersonalInformation";
 import AdminPasscodeCheck from "./DesktopView/JoinWorkspace/AdminPasscodeCheck";
+import MobileWorkspaceChat from "./user-dashboard/components/MobileWorkspaceChat";
 function App() {
   if (typeof window === "undefined") {
     return null;
@@ -128,6 +129,8 @@ function App() {
 
       <Route path="/incident/:id" element={<IncidentReportDetailMobile />} />
       <Route path="/incident/:id/edit/personal" element={<EditPersonalInformation />} />
+      <Route path="/workspace-chat" element={<MobileWorkspaceChat />} />
+
 
        {/* Redirect unknown → home */}
           <Route path="*" element={<Navigate to="/" replace />} />

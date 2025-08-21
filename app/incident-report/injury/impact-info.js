@@ -229,8 +229,8 @@ export default function ImpactInfo() {
                   id="description"
                   rows={4}
                   placeholder="Write here…"
-                  value={description}
-                  onChange={e => setDescription(e.target.value)}
+                  value={responseAction}
+                  onChange={e => setResponseAction(e.target.value)}
                   className="block w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-[#3B82F6] focus:border-[#3B82F6] text-black"
                 />
               </div>
