@@ -468,7 +468,7 @@ export default function SafePointDashboard() {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className="w-60 h-screen bg-white border-r">
+        <aside className="w-60 h-[calc(100vh-586px)] bg-white border-r">
           <div className="h-full flex flex-col">
             {/* Org header */}
             <div className="px-4 pt-4 pb-3">
